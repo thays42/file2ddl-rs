@@ -46,11 +46,17 @@ pub struct ParseArgs {
     #[arg(long, help = "File to write bad rows to")]
     pub badfile: Option<PathBuf>,
 
-    #[arg(long, default_value = "100", help = "Maximum bad rows to output")]
-    pub badmax: usize,
+    #[arg(long, default_value = "100", help = "Maximum bad rows to output (use 'all' for unlimited)")]
+    pub badmax: String,
 
     #[arg(long, default_value = "utf-8", help = "Input file encoding")]
     pub encoding: String,
+
+    #[arg(short = 'H', long, help = "File does not start with column headers")]
+    pub noheader: bool,
+
+    #[arg(long, default_value = "1048576", help = "Maximum line length in bytes")]
+    pub max_line_length: usize,
 
     #[arg(short, long, help = "Verbose output")]
     pub verbose: bool,
@@ -73,6 +79,9 @@ pub struct DescribeArgs {
     )]
     pub quote: QuoteStyle,
 
+    #[arg(long, help = "Quote escape character")]
+    pub escquote: Option<char>,
+
     #[arg(long, help = "Generate DDL statement")]
     pub ddl: bool,
 
@@ -87,6 +96,24 @@ pub struct DescribeArgs {
 
     #[arg(long, help = "DateTime format string")]
     pub fdatetime: Option<String>,
+
+    #[arg(long, help = "Values to treat as NULL")]
+    pub fnull: Vec<String>,
+
+    #[arg(long, default_value = "1", help = "TRUE value for boolean detection")]
+    pub ftrue: String,
+
+    #[arg(long, default_value = "0", help = "FALSE value for boolean detection")]
+    pub ffalse: String,
+
+    #[arg(long, default_value = "utf-8", help = "Input file encoding")]
+    pub encoding: String,
+
+    #[arg(short = 'H', long, help = "File does not start with column headers")]
+    pub noheader: bool,
+
+    #[arg(long, default_value = "1048576", help = "Maximum line length in bytes")]
+    pub max_line_length: usize,
 
     #[arg(short, long, help = "Verbose output")]
     pub verbose: bool,

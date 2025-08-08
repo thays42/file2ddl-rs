@@ -4,8 +4,6 @@ use regex::Regex;
 use std::sync::OnceLock;
 
 pub struct TypePatterns {
-    boolean_true: Regex,
-    boolean_false: Regex,
     integer: Regex,
     double: Regex,
     date: Regex,
@@ -18,8 +16,6 @@ static PATTERNS: OnceLock<TypePatterns> = OnceLock::new();
 impl TypePatterns {
     pub fn new() -> Self {
         TypePatterns {
-            boolean_true: Regex::new(r"^(?i)(true|t|yes|y|1)$").unwrap(),
-            boolean_false: Regex::new(r"^(?i)(false|f|no|n|0)$").unwrap(),
             integer: Regex::new(r"^[+-]?\d+$").unwrap(),
             double: Regex::new(r"^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$").unwrap(),
             date: Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap(),

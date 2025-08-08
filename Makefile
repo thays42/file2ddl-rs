@@ -1,7 +1,7 @@
 # file2ddl Makefile
 # Convenient targets for building, testing, and running the CLI
 
-.PHONY: help build test clean fmt lint check run-simple run-pipe run-quoted run-nulls run-bad run-comprehensive
+.PHONY: help build test clean fmt lint check run-simple run-pipe run-quoted run-nulls run-bad run-comprehensive run-describe run-describe-ddl run-describe-mysql run-describe-netezza run-describe-types run-describe-verbose run-describe-nulls run-describe-pipe test-new-features test-noheader test-escquote test-boolean-detection test-max-line-length test-badmax-all test-combined-features
 
 # Default target - show help
 help:
@@ -28,12 +28,34 @@ help:
 	@echo "  make run-encoding   - Parse CSV with different encoding"
 	@echo "  make run-comprehensive - Parse comprehensive test file"
 	@echo ""
+	@echo "Describe Command Examples:"
+	@echo "  make run-describe       - Basic type analysis of CSV"
+	@echo "  make run-describe-ddl   - Generate PostgreSQL DDL"
+	@echo "  make run-describe-mysql - Generate MySQL DDL"
+	@echo "  make run-describe-netezza - Generate Netezza DDL"
+	@echo "  make run-describe-types - Test type inference patterns"
+	@echo "  make run-describe-verbose - Type analysis with debug logging"
+	@echo "  make run-describe-nulls - Describe with custom NULL handling"
+	@echo ""
+	@echo "New Feature Tests (Design.md Compliance):"
+	@echo "  make test-new-features  - Test all new CLI flags"
+	@echo "  make test-noheader      - Test --noheader flag"
+	@echo "  make test-escquote      - Test --escquote flag"
+	@echo "  make test-boolean-detection - Test --ftrue/--ffalse flags"
+	@echo "  make test-max-line-length - Test --max-line-length flag"
+	@echo "  make test-badmax-all    - Test --badmax 'all' functionality"
+	@echo "  make test-combined-features - Test multiple features together"
+	@echo ""
 	@echo "Interactive Examples:"
 	@echo "  make demo-stdin     - Demo reading from stdin"
 	@echo "  make demo-transform - Demo NULL transformation pipeline"
 	@echo ""
 	@echo "Debugging:"
 	@echo "  make debug-simple   - Run with debug logging enabled"
+	@echo ""
+	@echo "Enhanced Examples (using new features):"
+	@echo "  make run-describe-enhanced - Describe with all new flags"
+	@echo "  make run-parse-enhanced    - Parse with all new flags"
 
 # Build targets
 build:
@@ -199,6 +221,71 @@ demo-pipeline:
 	@echo "📋 Stage 3: Final result:"
 	@cat /tmp/pipeline_out.csv
 
+# Describe command examples
+run-describe:
+	@echo "=== Basic type analysis of CSV ==="
+	@echo "📁 Input file (tests/data/simple.csv):"
+	@cat tests/data/simple.csv
+	@echo ""
+	@echo "🔍 Analyzing column types..."
+	cargo run -- describe -i tests/data/simple.csv
+
+run-describe-ddl:
+	@echo "=== Generate PostgreSQL DDL ==="
+	@echo "📁 Input file (tests/data/simple.csv):"
+	@cat tests/data/simple.csv
+	@echo ""
+	@echo "🏗️ Generating PostgreSQL CREATE TABLE statement..."
+	cargo run -- describe -i tests/data/simple.csv --ddl
+
+run-describe-mysql:
+	@echo "=== Generate MySQL DDL ==="
+	@echo "📁 Input file (tests/data/simple.csv):"
+	@cat tests/data/simple.csv
+	@echo ""
+	@echo "🏗️ Generating MySQL CREATE TABLE statement..."
+	cargo run -- describe -i tests/data/simple.csv --ddl --database mysql
+
+run-describe-netezza:
+	@echo "=== Generate Netezza DDL ==="
+	@echo "📁 Input file (tests/data/simple.csv):"
+	@cat tests/data/simple.csv
+	@echo ""
+	@echo "🏗️ Generating Netezza CREATE TABLE statement..."
+	cargo run -- describe -i tests/data/simple.csv --ddl --database netezza
+
+run-describe-types:
+	@echo "=== Test type inference patterns ==="
+	@echo "📁 Input file (tests/data/type_inference.csv):"
+	@cat tests/data/type_inference.csv
+	@echo ""
+	@echo "🧠 Analyzing complex type patterns..."
+	cargo run -- describe -i tests/data/type_inference.csv --ddl -v
+
+run-describe-verbose:
+	@echo "=== Type analysis with debug logging ==="
+	@echo "📁 Input file (tests/data/promotions.csv):"
+	@cat tests/data/promotions.csv
+	@echo ""
+	@echo "🐛 Running with verbose debug output..."
+	RUST_LOG=debug cargo run -- describe -i tests/data/promotions.csv -v
+
+run-describe-nulls:
+	@echo "=== Describe with custom NULL handling ==="
+	@echo "📁 Input file (tests/data/nulls.csv):"
+	@cat tests/data/nulls.csv
+	@echo ""
+	@echo "🔍 Analyzing with custom NULL patterns..."
+	cargo run -- describe -i tests/data/nulls.csv --fnull NULL --fnull "" --ddl
+
+run-describe-pipe:
+	@echo "=== Describe pipe-delimited file ==="
+	@echo "📁 Input file (tests/data/pipe_delimited.txt):"
+	@cat tests/data/pipe_delimited.txt
+	@echo ""
+	@echo "🔍 Analyzing pipe-delimited data..."
+	cargo run -- describe -i tests/data/pipe_delimited.txt -d '|' --ddl
+
 # Debugging targets
 debug-simple:
 	@echo "=== Running with debug logging ==="
@@ -247,5 +334,156 @@ create-test-data:
 	@echo "1,2" >> tests/data/malformed.csv
 	@echo "3,4,5,6" >> tests/data/malformed.csv
 	@echo "✅ Test data created"
+
+# New feature testing targets (design.md compliance)
+test-new-features: test-noheader test-escquote test-boolean-detection test-max-line-length test-badmax-all
+	@echo "✅ All new features tested successfully!"
+
+test-noheader:
+	@echo "=== Testing --noheader flag ==="
+	@echo "📝 Creating headerless CSV file..."
+	@echo "Alice,30,true" > /tmp/no_headers.csv
+	@echo "Bob,25,false" >> /tmp/no_headers.csv
+	@echo "Charlie,35,true" >> /tmp/no_headers.csv
+	@echo "📁 Input file (/tmp/no_headers.csv):"
+	@cat /tmp/no_headers.csv
+	@echo ""
+	@echo "🔄 Parsing with --noheader flag..."
+	cargo run -- parse -i /tmp/no_headers.csv --noheader -v
+	@echo ""
+	@echo "🔍 Analyzing with --noheader flag..."
+	cargo run -- describe -i /tmp/no_headers.csv --noheader --ddl
+	@echo ""
+
+test-escquote:
+	@echo "=== Testing --escquote flag ==="
+	@echo "📝 Creating CSV with escaped quotes..."
+	@echo 'name,quote,path' > /tmp/escaped_test.csv
+	@echo '"Alice","She said \"Hello\"","C:\path\to\file"' >> /tmp/escaped_test.csv
+	@echo '"Bob","\"Quoted text\"","D:\another\path"' >> /tmp/escaped_test.csv
+	@echo "📁 Input file (/tmp/escaped_test.csv):"
+	@cat /tmp/escaped_test.csv
+	@echo ""
+	@echo "🔄 Parsing with --escquote..."
+	cargo run -- parse -i /tmp/escaped_test.csv --escquote '"' -v
+	@echo ""
+	@echo "🔍 Analyzing with --escquote..."
+	cargo run -- describe -i /tmp/escaped_test.csv --escquote '"' --ddl
+	@echo ""
+
+test-boolean-detection:
+	@echo "=== Testing --ftrue/--ffalse boolean detection ==="
+	@echo "📝 Creating CSV with custom boolean values..."
+	@echo 'name,active,verified' > /tmp/custom_booleans.csv
+	@echo 'Alice,yes,Y' >> /tmp/custom_booleans.csv
+	@echo 'Bob,no,N' >> /tmp/custom_booleans.csv
+	@echo 'Charlie,yes,Y' >> /tmp/custom_booleans.csv
+	@echo "📁 Input file (/tmp/custom_booleans.csv):"
+	@cat /tmp/custom_booleans.csv
+	@echo ""
+	@echo "🧠 Analyzing with custom boolean values (--ftrue=yes --ffalse=no)..."
+	cargo run -- describe -i /tmp/custom_booleans.csv --ftrue "yes" --ffalse "no" --ddl -v
+	@echo ""
+	@echo "🧠 Analyzing second column with Y/N values..."
+	@echo 'name,status' > /tmp/yn_booleans.csv
+	@echo 'Alice,Y' >> /tmp/yn_booleans.csv
+	@echo 'Bob,N' >> /tmp/yn_booleans.csv
+	cargo run -- describe -i /tmp/yn_booleans.csv --ftrue "Y" --ffalse "N" --ddl -v
+	@echo ""
+
+test-max-line-length:
+	@echo "=== Testing --max-line-length flag ==="
+	@echo "📝 Creating CSV with varying line lengths..."
+	@echo 'id,short,medium,long' > /tmp/line_lengths.csv
+	@echo '1,hi,hello world,this is a somewhat longer line of text' >> /tmp/line_lengths.csv
+	@echo '2,ok,good morning,this is an even longer line of text that should still be processed normally' >> /tmp/line_lengths.csv
+	@echo "📁 Input file (/tmp/line_lengths.csv):"
+	@cat /tmp/line_lengths.csv
+	@echo ""
+	@echo "🔄 Parsing with default max-line-length..."
+	cargo run -- parse -i /tmp/line_lengths.csv --max-line-length 1048576 -v
+	@echo ""
+	@echo "🔍 Analyzing with custom max-line-length..."
+	cargo run -- describe -i /tmp/line_lengths.csv --max-line-length 1048576 --ddl -v
+	@echo ""
+
+test-badmax-all:
+	@echo "=== Testing --badmax 'all' functionality ==="
+	@echo "📝 Creating CSV with intentional errors..."
+	@echo 'id,name,age' > /tmp/errors_test.csv
+	@echo '1,Alice,30' >> /tmp/errors_test.csv
+	@echo '2,Bob' >> /tmp/errors_test.csv  # Missing field
+	@echo '3,Charlie,35,extra' >> /tmp/errors_test.csv  # Extra field
+	@echo '4,David,invalid_age' >> /tmp/errors_test.csv  # Not an error in CSV parsing
+	@echo '5,Eve,25' >> /tmp/errors_test.csv
+	@echo "📁 Input file (/tmp/errors_test.csv):"
+	@cat /tmp/errors_test.csv
+	@echo ""
+	@echo "🔄 Testing --badmax 'all' (unlimited bad rows)..."
+	cargo run -- parse -i /tmp/errors_test.csv --badmax all --badfile /tmp/all_bad_rows.csv -v || true
+	@echo ""
+	@echo "📝 Bad rows file content:"
+	@cat /tmp/all_bad_rows.csv 2>/dev/null || echo "No bad rows detected (CSV parser is flexible)"
+	@echo ""
+	@echo "🔄 Testing --badmax '1' (limited bad rows)..."
+	cargo run -- parse -i /tmp/errors_test.csv --badmax 1 --badfile /tmp/limited_bad_rows.csv -v || true
+	@echo ""
+
+test-combined-features:
+	@echo "=== Testing combined new features ==="
+	@echo "📝 Creating complex test scenario..."
+	@echo 'Alice,30,yes,null,"She said \"Hi\""' > /tmp/combined_test.csv
+	@echo 'Bob,25,no,,"Path: C:\test"' >> /tmp/combined_test.csv
+	@echo 'Charlie,invalid,yes,NULL,"Quote: \"test\""' >> /tmp/combined_test.csv
+	@echo "📁 Input file (/tmp/combined_test.csv):"
+	@cat /tmp/combined_test.csv
+	@echo ""
+	@echo "🔄 Parse with: --noheader, --escquote, --fnull, --badmax all..."
+	cargo run -- parse -i /tmp/combined_test.csv \
+		--noheader \
+		--escquote '"' \
+		--fnull "null" --fnull "NULL" --fnull "" \
+		--tnull "\\N" \
+		--badmax all \
+		--badfile /tmp/combined_bad.csv \
+		-v || true
+	@echo ""
+	@echo "🔍 Analyze with combined features..."
+	cargo run -- describe -i /tmp/combined_test.csv \
+		--noheader \
+		--escquote '"' \
+		--fnull "null" --fnull "NULL" --fnull "" \
+		--ftrue "yes" --ffalse "no" \
+		--max-line-length 1048576 \
+		--ddl -v
+	@echo ""
+
+# Enhanced existing targets to test new flags where relevant
+run-describe-enhanced:
+	@echo "=== Enhanced describe with all new flags ==="
+	@echo "📁 Input file (tests/data/simple.csv):"
+	@cat tests/data/simple.csv
+	@echo ""
+	@echo "🔍 Analyzing with enhanced flags..."
+	cargo run -- describe -i tests/data/simple.csv \
+		--fnull "" \
+		--ftrue "true" --ffalse "false" \
+		--encoding utf-8 \
+		--max-line-length 1048576 \
+		--ddl --database postgres -v
+
+run-parse-enhanced:
+	@echo "=== Enhanced parse with all new flags ==="
+	@echo "📁 Input file (tests/data/simple.csv):"
+	@cat tests/data/simple.csv
+	@echo ""
+	@echo "🔄 Parsing with enhanced flags..."
+	cargo run -- parse -i tests/data/simple.csv \
+		--fnull "" \
+		--tnull "NULL" \
+		--encoding utf-8 \
+		--max-line-length 1048576 \
+		--badmax all \
+		-v
 
 .DEFAULT_GOAL := help

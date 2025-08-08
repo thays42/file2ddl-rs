@@ -15,8 +15,12 @@ pub fn describe_command(args: DescribeArgs) -> Result<()> {
         debug!("Arguments: {:?}", args);
     }
 
-    // Prepare null values list
-    let null_values = vec!["".to_string(), "NULL".to_string(), "null".to_string()];
+    // Prepare null values list - use provided fnull or defaults
+    let null_values = if args.fnull.is_empty() {
+        vec!["".to_string(), "NULL".to_string(), "null".to_string()]
+    } else {
+        args.fnull.clone()
+    };
 
     // Create inference engine
     let mut engine = StreamingInferenceEngine::new(

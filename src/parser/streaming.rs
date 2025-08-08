@@ -6,6 +6,12 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 
 pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> Result<()> {
+    // Parse badmax - support "all" for unlimited
+    let max_bad_rows = if args.badmax == "all" {
+        None
+    } else {
+        Some(args.badmax.parse::<usize>().unwrap_or(100))
+    };
     let mut reader_builder = ReaderBuilder::new();
     reader_builder
         .delimiter(args.delimiter as u8)
@@ -73,7 +79,7 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
 
                 // Write to bad file if configured
                 if let Some(ref mut bw) = bad_writer {
-                    if bad_row_count <= args.badmax {
+                    if max_bad_rows.is_none() || bad_row_count <= max_bad_rows.unwrap() {
                         // Write error info as a CSV record
                         let error_record = StringRecord::from(vec![
                             format!("Row {}", total_rows),
@@ -83,12 +89,14 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
                     }
                 }
 
-                // Stop processing if we exceed badmax
-                if bad_row_count > args.badmax {
-                    if args.verbose {
-                        eprintln!("Maximum bad rows ({}) exceeded, stopping", args.badmax);
+                // Stop processing if we exceed badmax (unless "all")
+                if let Some(max_bad) = max_bad_rows {
+                    if bad_row_count > max_bad {
+                        if args.verbose {
+                            eprintln!("Maximum bad rows ({}) exceeded, stopping", max_bad);
+                        }
+                        break;
                     }
-                    break;
                 }
             }
         }
@@ -155,7 +163,9 @@ mod tests {
             fnull: vec![],
             tnull: String::new(),
             badfile: None,
-            badmax: 100,
+            badmax: "100".to_string(),
+            noheader: false,
+            max_line_length: 1048576,
             encoding: "utf-8".to_string(),
             verbose: false,
         }
