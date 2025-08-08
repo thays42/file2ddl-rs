@@ -4,7 +4,7 @@
 A high-performance CSV parser and DDL generator written in Rust that helps users prepare raw data files for loading into database tables.
 
 ## Current Status
-**Phase 1 Complete** - Basic streaming CSV parser with configurable delimiters
+**Phase 3 Complete** - Full type inference engine with DDL generation
 
 ## Key Commands
 
@@ -17,7 +17,7 @@ cargo build
 cargo test
 
 # Run with verbose output for debugging
-RUST_LOG=debug cargo run -- parse -i input.csv -v
+RUST_LOG=debug cargo run -- describe -i input.csv -v
 
 # Run benchmarks
 cargo bench
@@ -31,14 +31,23 @@ cargo clippy
 
 ### Usage Examples
 ```bash
-# Parse CSV from stdin
+# Analyze CSV structure and types
+cargo run -- describe -i data.csv
+
+# Generate PostgreSQL DDL
+cargo run -- describe -i data.csv --ddl
+
+# Generate MySQL DDL with verbose output
+cargo run -- describe -i data.csv --ddl --database mysql -v
+
+# Parse CSV from stdin (Phase 1 command)
 cat data.csv | cargo run -- parse
 
 # Parse CSV with custom delimiter
 cargo run -- parse -i tests/data/pipe_delimited.txt -o output.csv -d '|'
 
-# Parse with verbose output
-cargo run -- parse -i tests/data/simple.csv -v
+# Analyze pipe-delimited file
+cargo run -- describe -i tests/data/pipe_delimited.txt -d '|' --ddl
 ```
 
 ## Project Structure
@@ -57,12 +66,18 @@ cargo run -- parse -i tests/data/simple.csv -v
 │   ├── parser/          # CSV parsing logic
 │   │   ├── mod.rs       # Main parser module
 │   │   └── streaming.rs # Streaming CSV implementation
-│   ├── analyzer/        # Type inference (Phase 3-4)
-│   ├── ddl/            # DDL generation (Phase 4)
-│   ├── types/          # Type definitions (Phase 3)
+│   ├── analyzer/        # Type inference engine (Phase 3)
+│   │   ├── mod.rs       # Main analyzer with describe command
+│   │   ├── patterns.rs  # Type pattern matching
+│   │   ├── column.rs    # Per-column analysis
+│   │   └── inference.rs # Streaming inference engine
+│   ├── ddl/            # DDL generation utilities
+│   ├── types/          # SQL type system and column statistics
+│   │   └── mod.rs       # SqlType enum and ColumnStats
 │   └── utils/          # Utilities
 └── tests/
-    ├── integration/     # Integration tests
+    ├── describe_integration_tests.rs # Integration tests for describe
+    ├── integration/     # Parse command integration tests
     └── data/           # Test data files
 ```
 
@@ -89,7 +104,7 @@ cargo run -- parse -i tests/data/simple.csv -v
 - Parse command with delimiter handling
 - Test infrastructure
 
-### 🚧 Phase 2: Full Parse Command (Next)
+### ✅ Phase 2: Full Parse Command (Complete)
 - Quote character handling (single/double)
 - Quote escaping support
 - NULL value transformation (--fnull, --tnull)
@@ -97,25 +112,34 @@ cargo run -- parse -i tests/data/simple.csv -v
 - Multiple encoding support
 - RFC 4180 compliant output
 
-### 📋 Phase 3: Type Inference Engine
-- Type detection for SQL types (BOOLEAN, INTEGER, DATE, etc.)
-- Configurable type precedence
-- Type promotion logic
-- Date/time format parsing
+### ✅ Phase 3: Type Inference Engine (Complete)
+- Type detection for SQL types (BOOLEAN, SMALLINT, INTEGER, BIGINT, DOUBLE PRECISION, DATE, TIME, DATETIME, VARCHAR)
+- Intelligent type promotion hierarchy
+- Pattern-based recognition with regex
+- Date/time format parsing with configurable formats
+- Streaming analysis without loading entire files into memory
+- Column statistics collection (null counts, sample values, min/max)
+- Describe command with table output and DDL generation
 
-### 📋 Phase 4: Describe Command & DDL
+### ✅ Phase 4: Describe Command & DDL (Complete)
 - DDL generation for PostgreSQL, MySQL, Netezza
-- Column statistics collection
+- Column statistics collection with null percentage
 - Verbose logging for type promotions
+- Configurable null value detection
+- Column name sanitization for SQL compliance
 
-### 📋 Phase 5: Optimization
-- Performance benchmarks
-- Comprehensive test suite
-- Documentation
+### 📋 Phase 5: Optimization (Future)
+- Performance benchmarks with criterion
+- Memory optimization profiling
+- Large file processing optimization
 
 ## Test Data
-- `tests/data/simple.csv` - Basic CSV file
+- `tests/data/simple.csv` - Basic CSV file with id, name, age, active columns
 - `tests/data/pipe_delimited.txt` - Pipe-delimited file
+- `tests/data/type_inference.csv` - Complex types for testing inference
+- `tests/data/promotions.csv` - Type promotion testing
+- `tests/data/nulls.csv` - NULL value handling
+- `tests/data/quoted.csv` - Quote handling testing
 
 ## Important Implementation Notes
 
@@ -139,17 +163,27 @@ DATETIME -> VARCHAR
 - VARCHAR(n)
 
 ## Dependencies
-- **clap**: CLI argument parsing
+- **clap**: CLI argument parsing with derive macros
 - **csv**: RFC 4180 compliant CSV handling
-- **serde**: Serialization
-- **chrono**: Date/time parsing
+- **serde**: Serialization framework
+- **chrono**: Date/time parsing and formatting
+- **regex**: Pattern matching for type inference
 - **encoding_rs**: Character encoding support
-- **anyhow/thiserror**: Error handling
-- **log/env_logger**: Logging framework
+- **anyhow/thiserror**: Comprehensive error handling
+- **log/env_logger**: Structured logging framework
 
 ## Testing Strategy
-- Unit tests for individual functions
-- Integration tests for command flows
-- Property-based testing with proptest
-- Benchmarks with criterion
-- Test various delimiters, quotes, encodings, and error conditions
+- **Unit tests**: 24+ tests for individual functions and modules
+- **Integration tests**: 9+ end-to-end command tests
+- **Type inference tests**: Comprehensive coverage of all SQL types
+- **Pattern matching tests**: Boolean, numeric, date/time validation
+- **Error handling tests**: NULL values, type promotions, malformed data
+- **Multi-database tests**: PostgreSQL, MySQL, Netezza DDL generation
+
+## Current Capabilities
+- ✅ **Parse Command**: Stream CSV with configurable delimiters, quotes, null handling
+- ✅ **Describe Command**: Full type inference with statistical analysis
+- ✅ **DDL Generation**: CREATE TABLE statements for major databases
+- ✅ **Type System**: Complete SQL type hierarchy with intelligent promotions
+- ✅ **Streaming Architecture**: Memory-efficient processing of large files
+- ✅ **Error Resilience**: Graceful handling of malformed data with limits

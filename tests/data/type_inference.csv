@@ -1,0 +1,6 @@
+id,name,age,salary,active,created_date,created_time,updated_at,notes
+1,Alice,25,50000.50,true,2023-01-15,09:30:00,2023-01-15 09:30:00,Initial record
+2,Bob,30,75000,false,2023-02-20,14:15:30,2023-02-20 14:15:30,
+3,Charlie,35,,true,2023-03-10,10:45:15,2023-03-10 10:45:15,Updated profile
+4,David,28,85000.25,false,,11:30:00,,Regular employee
+5,,32,65000,true,2023-05-01,,,NULL

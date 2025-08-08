@@ -56,7 +56,7 @@ pub struct ParseArgs {
     pub verbose: bool,
 }
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 pub struct DescribeArgs {
     #[arg(short, long, help = "Input file path (default: stdin)")]
     pub input: Option<PathBuf>,
@@ -92,7 +92,7 @@ pub struct DescribeArgs {
     pub verbose: bool,
 }
 
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, Debug, ValueEnum)]
 pub enum QuoteStyle {
     Double,
     Single,
@@ -109,7 +109,7 @@ impl QuoteStyle {
     }
 }
 
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, Debug, ValueEnum)]
 pub enum DatabaseType {
     Postgres,
     Mysql,

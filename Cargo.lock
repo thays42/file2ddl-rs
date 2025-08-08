@@ -390,6 +390,7 @@ dependencies = [
  "env_logger",
  "log",
  "proptest",
+ "regex",
  "serde",
  "tempfile",
  "thiserror",
