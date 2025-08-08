@@ -94,6 +94,7 @@ impl StreamingInferenceEngine {
                 header.clone(),
                 self.inferencer.clone(),
                 self.null_values.clone(),
+                self.verbose,
             );
             self.analyzers.insert(i, analyzer);
         }
@@ -162,7 +163,7 @@ impl StreamingInferenceEngine {
             }
 
             if let Some(analyzer) = self.analyzers.get_mut(&i) {
-                analyzer.analyze_value(field);
+                analyzer.analyze_value(field, self.row_count);
             }
         }
 
@@ -177,7 +178,7 @@ impl StreamingInferenceEngine {
 
             for i in record.len()..self.headers.len() {
                 if let Some(analyzer) = self.analyzers.get_mut(&i) {
-                    analyzer.analyze_value(""); // Empty string is treated as null
+                    analyzer.analyze_value("", self.row_count); // Empty string is treated as null
                 }
             }
         }

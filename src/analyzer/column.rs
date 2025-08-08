@@ -1,5 +1,6 @@
 use crate::analyzer::patterns::TypeInferencer;
 use crate::types::{ColumnStats, SqlType};
+use log::info;
 use std::collections::HashSet;
 
 const MAX_SAMPLE_VALUES: usize = 10;
@@ -12,10 +13,12 @@ pub struct ColumnAnalyzer {
     null_values: HashSet<String>,
     unique_values: HashSet<String>,
     first_non_null_type: Option<SqlType>,
+    verbose: bool,
+    current_row: usize,
 }
 
 impl ColumnAnalyzer {
-    pub fn new(name: String, inferencer: TypeInferencer, null_values: Vec<String>) -> Self {
+    pub fn new(name: String, inferencer: TypeInferencer, null_values: Vec<String>, verbose: bool) -> Self {
         let mut null_set = HashSet::new();
         null_set.insert("".to_string());
         null_set.insert("NULL".to_string());
@@ -31,10 +34,13 @@ impl ColumnAnalyzer {
             null_values: null_set,
             unique_values: HashSet::new(),
             first_non_null_type: None,
+            verbose,
+            current_row: 0,
         }
     }
 
-    pub fn analyze_value(&mut self, value: &str) {
+    pub fn analyze_value(&mut self, value: &str, row_number: usize) {
+        self.current_row = row_number;
         self.stats.total_count += 1;
 
         let trimmed = value.trim();
@@ -94,7 +100,12 @@ impl ColumnAnalyzer {
         // If this is our first non-null value, set the initial type
         if self.first_non_null_type.is_none() {
             self.first_non_null_type = Some(new_type.clone());
-            self.stats.sql_type = new_type;
+            self.stats.sql_type = new_type.clone();
+            
+            if self.verbose {
+                info!("Column '{}' initial type set to {} on row {} with value: '{}'", 
+                      self.stats.name, new_type, self.current_row, value);
+            }
             return;
         }
 
@@ -105,10 +116,15 @@ impl ColumnAnalyzer {
             if promoted_type != self.stats.sql_type {
                 // Log the promotion
                 let promotion_msg = format!(
-                    "Promoted from {} to {} due to value: '{}'",
-                    self.stats.sql_type, promoted_type, value
+                    "Row {}: promoted from {} to {} due to value: '{}'",
+                    self.current_row, self.stats.sql_type, promoted_type, value
                 );
-                self.stats.type_promotions.push(promotion_msg);
+                self.stats.type_promotions.push(promotion_msg.clone());
+                
+                if self.verbose {
+                    info!("Column '{}' {}", self.stats.name, promotion_msg);
+                }
+                
                 self.stats.sql_type = promoted_type;
             }
         }
@@ -194,11 +210,11 @@ mod tests {
     #[test]
     fn test_basic_analysis() {
         let inferencer = TypeInferencer::new();
-        let mut analyzer = ColumnAnalyzer::new("test_col".to_string(), inferencer, vec![]);
+        let mut analyzer = ColumnAnalyzer::new("test_col".to_string(), inferencer, vec![], false);
 
-        analyzer.analyze_value("123");
-        analyzer.analyze_value("456");
-        analyzer.analyze_value("789");
+        analyzer.analyze_value("123", 1);
+        analyzer.analyze_value("456", 2);
+        analyzer.analyze_value("789", 3);
 
         let stats = analyzer.get_stats();
         assert_eq!(stats.sql_type, SqlType::SmallInt);
@@ -210,11 +226,11 @@ mod tests {
     #[test]
     fn test_type_promotion() {
         let inferencer = TypeInferencer::new();
-        let mut analyzer = ColumnAnalyzer::new("test_col".to_string(), inferencer, vec![]);
+        let mut analyzer = ColumnAnalyzer::new("test_col".to_string(), inferencer, vec![], false);
 
-        analyzer.analyze_value("123"); // SmallInt
-        analyzer.analyze_value("true"); // Boolean -> promotes to SmallInt
-        analyzer.analyze_value("2147483648"); // BigInt -> promotes to BigInt
+        analyzer.analyze_value("123", 1); // SmallInt
+        analyzer.analyze_value("true", 2); // Boolean -> promotes to SmallInt
+        analyzer.analyze_value("2147483648", 3); // BigInt -> promotes to BigInt
 
         let stats = analyzer.get_stats();
         assert_eq!(stats.sql_type, SqlType::BigInt);
@@ -225,13 +241,13 @@ mod tests {
     fn test_null_handling() {
         let inferencer = TypeInferencer::new();
         let mut analyzer =
-            ColumnAnalyzer::new("test_col".to_string(), inferencer, vec!["N/A".to_string()]);
+            ColumnAnalyzer::new("test_col".to_string(), inferencer, vec!["N/A".to_string()], false);
 
-        analyzer.analyze_value("123");
-        analyzer.analyze_value("");
-        analyzer.analyze_value("NULL");
-        analyzer.analyze_value("N/A");
-        analyzer.analyze_value("456");
+        analyzer.analyze_value("123", 1);
+        analyzer.analyze_value("", 2);
+        analyzer.analyze_value("NULL", 3);
+        analyzer.analyze_value("N/A", 4);
+        analyzer.analyze_value("456", 5);
 
         let stats = analyzer.get_stats();
         assert_eq!(stats.total_count, 5);
@@ -243,10 +259,10 @@ mod tests {
     #[test]
     fn test_varchar_sizing() {
         let inferencer = TypeInferencer::new();
-        let mut analyzer = ColumnAnalyzer::new("test_col".to_string(), inferencer, vec![]);
+        let mut analyzer = ColumnAnalyzer::new("test_col".to_string(), inferencer, vec![], false);
 
-        analyzer.analyze_value("short");
-        analyzer.analyze_value("a much longer string value");
+        analyzer.analyze_value("short", 1);
+        analyzer.analyze_value("a much longer string value", 2);
 
         let stats = analyzer.get_stats();
         assert_eq!(stats.sql_type, SqlType::Varchar(Some(26)));
@@ -256,17 +272,21 @@ mod tests {
     #[test]
     fn test_categorical_detection() {
         let inferencer = TypeInferencer::new();
-        let mut analyzer = ColumnAnalyzer::new("status".to_string(), inferencer, vec![]);
+        let mut analyzer = ColumnAnalyzer::new("status".to_string(), inferencer, vec![], false);
 
         // Add many values but only a few unique ones
+        let mut row = 1;
         for _ in 0..100 {
-            analyzer.analyze_value("active");
+            analyzer.analyze_value("active", row);
+            row += 1;
         }
         for _ in 0..50 {
-            analyzer.analyze_value("inactive");
+            analyzer.analyze_value("inactive", row);
+            row += 1;
         }
         for _ in 0..25 {
-            analyzer.analyze_value("pending");
+            analyzer.analyze_value("pending", row);
+            row += 1;
         }
 
         assert!(analyzer.is_likely_categorical());
