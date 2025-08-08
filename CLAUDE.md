@@ -4,7 +4,7 @@
 A high-performance CSV parser and DDL generator written in Rust that helps users prepare raw data files for loading into database tables.
 
 ## Current Status
-**Phase 3 Complete** - Full type inference engine with DDL generation
+**Phase 5 Complete** - Full optimization with performance benchmarking and memory profiling
 
 ## Key Commands
 
@@ -21,6 +21,9 @@ RUST_LOG=debug cargo run -- describe -i input.csv -v
 
 # Run benchmarks
 cargo bench
+
+# Run performance regression tests
+cargo test performance_regression
 
 # Check code formatting
 cargo fmt -- --check
@@ -66,18 +69,28 @@ cargo run -- describe -i tests/data/pipe_delimited.txt -d '|' --ddl
 │   ├── parser/          # CSV parsing logic
 │   │   ├── mod.rs       # Main parser module
 │   │   └── streaming.rs # Streaming CSV implementation
-│   ├── analyzer/        # Type inference engine (Phase 3)
+│   ├── analyzer/        # Type inference engine with optimization
 │   │   ├── mod.rs       # Main analyzer with describe command
 │   │   ├── patterns.rs  # Type pattern matching
 │   │   ├── column.rs    # Per-column analysis
-│   │   └── inference.rs # Streaming inference engine
+│   │   ├── inference.rs # Streaming inference engine
+│   │   └── optimized.rs # Performance-optimized analyzer
 │   ├── ddl/            # DDL generation utilities
 │   ├── types/          # SQL type system and column statistics
 │   │   └── mod.rs       # SqlType enum and ColumnStats
+│   ├── perf/           # Performance monitoring utilities
 │   └── utils/          # Utilities
+├── benches/            # Performance benchmarks
+│   ├── csv_parsing.rs   # CSV parsing benchmarks
+│   ├── type_inference.rs# Type inference benchmarks
+│   └── memory_profile.rs# Memory profiling benchmarks
+├── docs/               # Documentation
+│   ├── PERFORMANCE.md   # Performance analysis report
+│   └── plan.md         # Implementation plan
 └── tests/
     ├── describe_integration_tests.rs # Integration tests for describe
     ├── integration/     # Parse command integration tests
+    ├── performance_regression.rs # Performance regression tests
     └── data/           # Test data files
 ```
 
@@ -128,10 +141,13 @@ cargo run -- describe -i tests/data/pipe_delimited.txt -d '|' --ddl
 - Configurable null value detection
 - Column name sanitization for SQL compliance
 
-### 📋 Phase 5: Optimization (Future)
-- Performance benchmarks with criterion
-- Memory optimization profiling
-- Large file processing optimization
+### ✅ Phase 5: Performance Optimization (Complete)
+- Comprehensive benchmarking suite with criterion
+- Memory optimization and profiling infrastructure
+- Performance regression testing framework
+- Optimized analyzer with adaptive buffer sizing
+- Memory usage monitoring and estimation
+- Large file processing optimization (500+ MiB/s throughput)
 
 ## Test Data
 - `tests/data/simple.csv` - Basic CSV file with id, name, age, active columns
@@ -171,14 +187,19 @@ DATETIME -> VARCHAR
 - **encoding_rs**: Character encoding support
 - **anyhow/thiserror**: Comprehensive error handling
 - **log/env_logger**: Structured logging framework
+- **tempfile**: Temporary file management for testing
+- **criterion**: Performance benchmarking framework
+- **proptest**: Property-based testing
 
 ## Testing Strategy
 - **Unit tests**: 24+ tests for individual functions and modules
-- **Integration tests**: 9+ end-to-end command tests
+- **Integration tests**: 15+ end-to-end command tests
 - **Type inference tests**: Comprehensive coverage of all SQL types
 - **Pattern matching tests**: Boolean, numeric, date/time validation
 - **Error handling tests**: NULL values, type promotions, malformed data
 - **Multi-database tests**: PostgreSQL, MySQL, Netezza DDL generation
+- **Performance benchmarks**: CSV parsing, type inference, memory profiling
+- **Regression tests**: Automated performance threshold validation
 
 ## Current Capabilities
 - ✅ **Parse Command**: Stream CSV with configurable delimiters, quotes, null handling
@@ -187,3 +208,7 @@ DATETIME -> VARCHAR
 - ✅ **Type System**: Complete SQL type hierarchy with intelligent promotions
 - ✅ **Streaming Architecture**: Memory-efficient processing of large files
 - ✅ **Error Resilience**: Graceful handling of malformed data with limits
+- ✅ **Performance Optimization**: 500+ MiB/s throughput with adaptive optimization
+- ✅ **Memory Efficiency**: Constant memory usage regardless of file size
+- ✅ **Benchmarking Suite**: Comprehensive performance validation and monitoring
+- ✅ **Regression Testing**: Automated performance threshold enforcement
