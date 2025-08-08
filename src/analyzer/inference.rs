@@ -2,7 +2,7 @@ use crate::analyzer::{column::ColumnAnalyzer, patterns::TypeInferencer};
 use crate::types::ColumnStats;
 use anyhow::{Context, Result};
 use csv::ReaderBuilder;
-use log::{debug, info, warn};
+use log;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -85,8 +85,11 @@ impl StreamingInferenceEngine {
             .collect();
 
         if self.verbose {
-            info!("Found {} columns: {:?}", self.headers.len(), self.headers);
+            eprintln!("Found {} columns: {:?}", self.headers.len(), self.headers);
         }
+        
+        // Also log for RUST_LOG debug mode
+        log::debug!("Found {} columns: {:?}", self.headers.len(), self.headers);
 
         // Initialize analyzers for each column
         for (i, header) in self.headers.iter().enumerate() {
@@ -107,7 +110,7 @@ impl StreamingInferenceEngine {
                 }
                 Err(e) => {
                     self.error_count += 1;
-                    warn!("Error processing row {}: {}", self.row_count + 1, e);
+                    log::warn!("Error processing row {}: {}", self.row_count + 1, e);
 
                     if self.error_count >= self.max_errors {
                         return Err(anyhow::anyhow!(
@@ -126,11 +129,17 @@ impl StreamingInferenceEngine {
         }
 
         if self.verbose {
-            info!(
+            eprintln!(
                 "Analysis complete. Processed {} rows with {} errors.",
                 self.row_count, self.error_count
             );
         }
+        
+        // Also log for RUST_LOG debug mode
+        log::debug!(
+            "Analysis complete. Processed {} rows with {} errors.",
+            self.row_count, self.error_count
+        );
 
         // Return column statistics in header order
         let mut stats = Vec::new();
@@ -147,18 +156,29 @@ impl StreamingInferenceEngine {
         self.row_count += 1;
 
         if self.verbose && self.row_count % 10000 == 0 {
-            debug!("Processed {} rows", self.row_count);
+            eprintln!("Processed {} rows", self.row_count);
+        }
+        
+        // Also log for RUST_LOG debug mode (but with lower frequency to avoid spam)
+        if self.row_count % 10000 == 0 {
+            log::debug!("Processed {} rows", self.row_count);
         }
 
         // Process each field in the record
         for (i, field) in record.iter().enumerate() {
             if i >= self.headers.len() {
                 if self.verbose {
-                    warn!(
+                    eprintln!(
                         "Row {} has more columns than headers. Ignoring extra columns.",
                         self.row_count
                     );
                 }
+                
+                // Also log for RUST_LOG debug mode
+                log::warn!(
+                    "Row {} has more columns than headers. Ignoring extra columns.",
+                    self.row_count
+                );
                 break;
             }
 
@@ -170,11 +190,17 @@ impl StreamingInferenceEngine {
         // Handle missing fields (fewer columns than headers)
         if record.len() < self.headers.len() {
             if self.verbose {
-                debug!(
+                eprintln!(
                     "Row {} has fewer columns than headers. Treating missing as null.",
                     self.row_count
                 );
             }
+            
+            // Also log for RUST_LOG debug mode
+            log::debug!(
+                "Row {} has fewer columns than headers. Treating missing as null.",
+                self.row_count
+            );
 
             for i in record.len()..self.headers.len() {
                 if let Some(analyzer) = self.analyzers.get_mut(&i) {

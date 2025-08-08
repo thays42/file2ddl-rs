@@ -1,6 +1,6 @@
 use crate::analyzer::patterns::TypeInferencer;
 use crate::types::{ColumnStats, SqlType};
-use log::info;
+use log;
 use std::collections::HashSet;
 
 const MAX_SAMPLE_VALUES: usize = 10;
@@ -103,9 +103,13 @@ impl ColumnAnalyzer {
             self.stats.sql_type = new_type.clone();
             
             if self.verbose {
-                info!("Column '{}' initial type set to {} on row {} with value: '{}'", 
-                      self.stats.name, new_type, self.current_row, value);
+                eprintln!("Column '{}' initial type set to {} on row {} with value: '{}'", 
+                          self.stats.name, new_type, self.current_row, value);
             }
+            
+            // Also log for RUST_LOG debug mode
+            log::debug!("Column '{}' initial type set to {} on row {} with value: '{}'", 
+                       self.stats.name, new_type, self.current_row, value);
             return;
         }
 
@@ -122,8 +126,11 @@ impl ColumnAnalyzer {
                 self.stats.type_promotions.push(promotion_msg.clone());
                 
                 if self.verbose {
-                    info!("Column '{}' {}", self.stats.name, promotion_msg);
+                    eprintln!("Column '{}' {}", self.stats.name, promotion_msg);
                 }
+                
+                // Also log for RUST_LOG debug mode
+                log::debug!("Column '{}' {}", self.stats.name, promotion_msg);
                 
                 self.stats.sql_type = promoted_type;
             }
