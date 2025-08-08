@@ -1,0 +1,102 @@
+use clap::{Parser, Subcommand, ValueEnum};
+use std::path::PathBuf;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Commands,
+}
+
+#[derive(Subcommand)]
+pub enum Commands {
+    Parse(ParseArgs),
+    Describe(DescribeArgs),
+}
+
+#[derive(Parser)]
+pub struct ParseArgs {
+    #[arg(short, long, help = "Input file path (default: stdin)")]
+    pub input: Option<PathBuf>,
+
+    #[arg(short, long, help = "Output file path (default: stdout)")]
+    pub output: Option<PathBuf>,
+
+    #[arg(short, long, default_value = ",", help = "Field delimiter")]
+    pub delimiter: char,
+
+    #[arg(short, long, value_enum, default_value = "double", help = "Quote character")]
+    pub quote: QuoteStyle,
+
+    #[arg(long, help = "Quote escape character")]
+    pub escquote: Option<char>,
+
+    #[arg(long, help = "Values to transform FROM null")]
+    pub fnull: Vec<String>,
+
+    #[arg(long, default_value = "", help = "Value to transform TO null")]
+    pub tnull: String,
+
+    #[arg(long, help = "File to write bad rows to")]
+    pub badfile: Option<PathBuf>,
+
+    #[arg(long, default_value = "100", help = "Maximum bad rows to output")]
+    pub badmax: usize,
+
+    #[arg(short, long, help = "Verbose output")]
+    pub verbose: bool,
+}
+
+#[derive(Parser)]
+pub struct DescribeArgs {
+    #[arg(short, long, help = "Input file path (default: stdin)")]
+    pub input: Option<PathBuf>,
+
+    #[arg(short, long, default_value = ",", help = "Field delimiter")]
+    pub delimiter: char,
+
+    #[arg(short, long, value_enum, default_value = "double", help = "Quote character")]
+    pub quote: QuoteStyle,
+
+    #[arg(long, help = "Generate DDL statement")]
+    pub ddl: bool,
+
+    #[arg(long, value_enum, default_value = "postgres", help = "Target database")]
+    pub database: DatabaseType,
+
+    #[arg(long, help = "Date format string")]
+    pub fdate: Option<String>,
+
+    #[arg(long, help = "Time format string")]
+    pub ftime: Option<String>,
+
+    #[arg(long, help = "DateTime format string")]
+    pub fdatetime: Option<String>,
+
+    #[arg(short, long, help = "Verbose output")]
+    pub verbose: bool,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+pub enum QuoteStyle {
+    Double,
+    Single,
+    None,
+}
+
+impl QuoteStyle {
+    pub fn as_byte(&self) -> Option<u8> {
+        match self {
+            QuoteStyle::Double => Some(b'"'),
+            QuoteStyle::Single => Some(b'\''),
+            QuoteStyle::None => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+pub enum DatabaseType {
+    Postgres,
+    Mysql,
+    Netezza,
+}
