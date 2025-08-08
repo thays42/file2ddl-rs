@@ -25,7 +25,13 @@ pub struct ParseArgs {
     #[arg(short, long, default_value = ",", help = "Field delimiter")]
     pub delimiter: char,
 
-    #[arg(short, long, value_enum, default_value = "double", help = "Quote character")]
+    #[arg(
+        short,
+        long,
+        value_enum,
+        default_value = "double",
+        help = "Quote character"
+    )]
     pub quote: QuoteStyle,
 
     #[arg(long, help = "Quote escape character")]
@@ -43,6 +49,9 @@ pub struct ParseArgs {
     #[arg(long, default_value = "100", help = "Maximum bad rows to output")]
     pub badmax: usize,
 
+    #[arg(long, default_value = "utf-8", help = "Input file encoding")]
+    pub encoding: String,
+
     #[arg(short, long, help = "Verbose output")]
     pub verbose: bool,
 }
@@ -55,7 +64,13 @@ pub struct DescribeArgs {
     #[arg(short, long, default_value = ",", help = "Field delimiter")]
     pub delimiter: char,
 
-    #[arg(short, long, value_enum, default_value = "double", help = "Quote character")]
+    #[arg(
+        short,
+        long,
+        value_enum,
+        default_value = "double",
+        help = "Quote character"
+    )]
     pub quote: QuoteStyle,
 
     #[arg(long, help = "Generate DDL statement")]

@@ -5,7 +5,8 @@
       "Bash(mkdir:*)",
       "Bash(cargo:*)",
       "Bash(rm:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(make:*)"
     ],
     "deny": []
   }

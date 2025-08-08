@@ -1,0 +1,5 @@
+id,"name","description","status","value"
+1,"Alice Smith","Works in ""Marketing""","active",100.50
+2,"Bob Jones","Has, multiple, commas",NULL,200.00
+3,"Charlie Brown","Normal text","inactive",NULL
+4,"Dave Wilson","Uses 'quotes' and ""double quotes""","",350.75

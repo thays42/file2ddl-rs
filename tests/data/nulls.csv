@@ -1,0 +1,5 @@
+name,age,city,country
+Alice,30,NYC,USA
+Bob,NULL,LA,NULL
+Charlie,25,,USA
+Dave,35,SF,
