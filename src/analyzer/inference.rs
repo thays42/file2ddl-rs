@@ -313,7 +313,7 @@ mod tests {
         let stats = engine.analyze_csv_reader(cursor, b',', Some(b'"')).unwrap();
 
         assert_eq!(stats.len(), 1);
-        assert_eq!(stats[0].sql_type, crate::types::SqlType::Varchar(Some(5))); // "hello" is 5 chars
+        assert_eq!(stats[0].sql_type, crate::types::SqlType::Varchar(Some(6))); // max length from "456.78" is 6 chars
         assert!(!stats[0].type_promotions.is_empty());
     }
 

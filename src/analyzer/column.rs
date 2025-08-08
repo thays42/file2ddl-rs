@@ -115,7 +115,14 @@ impl ColumnAnalyzer {
 
         // Check if we need to promote the type
         if self.stats.sql_type != new_type {
-            let promoted_type = self.stats.sql_type.promote(&new_type);
+            let mut promoted_type = self.stats.sql_type.promote(&new_type);
+
+            // If we're promoting to VARCHAR, ensure it can accommodate the maximum length seen so far
+            if let SqlType::Varchar(Some(size)) = &promoted_type {
+                if self.stats.max_length > *size {
+                    promoted_type = SqlType::Varchar(Some(self.stats.max_length));
+                }
+            }
 
             if promoted_type != self.stats.sql_type {
                 // Log the promotion
