@@ -68,7 +68,7 @@ pub fn describe_command(args: DescribeArgs) -> Result<()> {
     Ok(())
 }
 
-fn print_analysis_output(stats: &[ColumnStats], verbose: bool) -> Result<()> {
+fn print_analysis_output(stats: &[ColumnStats], _verbose: bool) -> Result<()> {
     // Print table header
     println!(
         "{:<20} {:<15} {:<8} {:<8} {:<8} {:<10}",
@@ -94,27 +94,6 @@ fn print_analysis_output(stats: &[ColumnStats], verbose: bool) -> Result<()> {
             stat.max_length
         );
 
-        // Show sample values if verbose
-        if verbose && !stat.sample_values.is_empty() {
-            println!(
-                "    Sample values: {}",
-                stat.sample_values
-                    .iter()
-                    .take(5)
-                    .map(|v| format!("'{}'", v))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
-        }
-
-        // Show min/max if available
-        if verbose {
-            if let (Some(min), Some(max)) = (&stat.min_value, &stat.max_value) {
-                if min != max {
-                    println!("    Range: '{}' to '{}'", min, max);
-                }
-            }
-        }
     }
 
     Ok(())
