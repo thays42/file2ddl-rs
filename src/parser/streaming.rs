@@ -208,7 +208,7 @@ mod tests {
         assert!(result.is_ok());
         let output_str = String::from_utf8(output).unwrap();
         // Empty file produces empty quoted header from csv library
-        assert!(output_str == "" || output_str == "\"\"\n");
+        assert!(output_str.is_empty() || output_str == "\"\"\n");
     }
 
     #[test]

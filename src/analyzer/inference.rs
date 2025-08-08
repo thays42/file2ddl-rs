@@ -87,7 +87,7 @@ impl StreamingInferenceEngine {
         if self.verbose {
             eprintln!("Found {} columns: {:?}", self.headers.len(), self.headers);
         }
-        
+
         // Also log for RUST_LOG debug mode
         log::debug!("Found {} columns: {:?}", self.headers.len(), self.headers);
 
@@ -134,11 +134,12 @@ impl StreamingInferenceEngine {
                 self.row_count, self.error_count
             );
         }
-        
+
         // Also log for RUST_LOG debug mode
         log::debug!(
             "Analysis complete. Processed {} rows with {} errors.",
-            self.row_count, self.error_count
+            self.row_count,
+            self.error_count
         );
 
         // Return column statistics in header order
@@ -158,7 +159,7 @@ impl StreamingInferenceEngine {
         if self.verbose && self.row_count % 10000 == 0 {
             eprintln!("Processed {} rows", self.row_count);
         }
-        
+
         // Also log for RUST_LOG debug mode (but with lower frequency to avoid spam)
         if self.row_count % 10000 == 0 {
             log::debug!("Processed {} rows", self.row_count);
@@ -173,7 +174,7 @@ impl StreamingInferenceEngine {
                         self.row_count
                     );
                 }
-                
+
                 // Also log for RUST_LOG debug mode
                 log::warn!(
                     "Row {} has more columns than headers. Ignoring extra columns.",
@@ -195,7 +196,7 @@ impl StreamingInferenceEngine {
                     self.row_count
                 );
             }
-            
+
             // Also log for RUST_LOG debug mode
             log::debug!(
                 "Row {} has fewer columns than headers. Treating missing as null.",
@@ -226,7 +227,7 @@ impl StreamingInferenceEngine {
             return;
         }
 
-        for (_i, analyzer) in &self.analyzers {
+        for analyzer in self.analyzers.values() {
             let stats = analyzer.get_stats();
             if !stats.type_promotions.is_empty() {
                 println!("\nType promotions for column '{}':", stats.name);

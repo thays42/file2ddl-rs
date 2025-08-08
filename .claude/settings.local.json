@@ -9,7 +9,11 @@
       "Bash(make:*)",
       "Bash(RUST_LOG=debug cargo run -- describe -i tests/data/promotions.csv -v)",
       "Bash(find:*)",
-      "Bash(RUST_BACKTRACE=1 cargo test --test describe_integration_tests test_null_handling -- --nocapture)"
+      "Bash(RUST_BACKTRACE=1 cargo test --test describe_integration_tests test_null_handling -- --nocapture)",
+      "Bash(git rev-parse:*)",
+      "Bash(git init:*)",
+      "Bash(chmod:*)",
+      "Bash(.git/hooks/pre-commit)"
     ],
     "deny": []
   }

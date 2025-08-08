@@ -94,7 +94,6 @@ fn print_analysis_output(stats: &[ColumnStats], _verbose: bool) -> Result<()> {
             null_pct,
             stat.max_length
         );
-
     }
 
     Ok(())
@@ -188,11 +187,7 @@ fn sanitize_column_name(name: &str) -> String {
         .collect::<String>();
 
     // Ensure it starts with a letter or underscore
-    if sanitized
-        .chars()
-        .next()
-        .map_or(false, |c| c.is_ascii_digit())
-    {
+    if sanitized.chars().next().is_some_and(|c| c.is_ascii_digit()) {
         format!("_{}", sanitized)
     } else {
         sanitized

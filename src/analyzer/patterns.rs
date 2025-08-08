@@ -13,6 +13,12 @@ pub struct TypePatterns {
 
 static PATTERNS: OnceLock<TypePatterns> = OnceLock::new();
 
+impl Default for TypePatterns {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TypePatterns {
     pub fn new() -> Self {
         TypePatterns {
@@ -111,10 +117,8 @@ impl TypeInferencer {
         }
 
         // Check double
-        if patterns.double.is_match(trimmed) {
-            if trimmed.parse::<f64>().is_ok() {
-                return SqlType::DoublePrecision;
-            }
+        if patterns.double.is_match(trimmed) && trimmed.parse::<f64>().is_ok() {
+            return SqlType::DoublePrecision;
         }
 
         // Check date
@@ -151,17 +155,15 @@ impl TypeInferencer {
     fn is_date(&self, value: &str) -> bool {
         // First try the default pattern
         let patterns = TypePatterns::get();
-        if patterns.date.is_match(value) {
-            if let Ok(_) = NaiveDate::parse_from_str(value, "%Y-%m-%d") {
-                return true;
-            }
+        if patterns.date.is_match(value) && NaiveDate::parse_from_str(value, "%Y-%m-%d").is_ok() {
+            return true;
         }
 
         // Try custom format if different
-        if self.date_format != "%Y-%m-%d" {
-            if let Ok(_) = NaiveDate::parse_from_str(value, &self.date_format) {
-                return true;
-            }
+        if self.date_format != "%Y-%m-%d"
+            && NaiveDate::parse_from_str(value, &self.date_format).is_ok()
+        {
+            return true;
         }
 
         false
@@ -170,17 +172,15 @@ impl TypeInferencer {
     fn is_time(&self, value: &str) -> bool {
         // First try the default pattern
         let patterns = TypePatterns::get();
-        if patterns.time.is_match(value) {
-            if let Ok(_) = NaiveTime::parse_from_str(value, "%H:%M:%S") {
-                return true;
-            }
+        if patterns.time.is_match(value) && NaiveTime::parse_from_str(value, "%H:%M:%S").is_ok() {
+            return true;
         }
 
         // Try custom format if different
-        if self.time_format != "%H:%M:%S" {
-            if let Ok(_) = NaiveTime::parse_from_str(value, &self.time_format) {
-                return true;
-            }
+        if self.time_format != "%H:%M:%S"
+            && NaiveTime::parse_from_str(value, &self.time_format).is_ok()
+        {
+            return true;
         }
 
         false
@@ -189,17 +189,17 @@ impl TypeInferencer {
     fn is_datetime(&self, value: &str) -> bool {
         // First try the default pattern
         let patterns = TypePatterns::get();
-        if patterns.datetime.is_match(value) {
-            if let Ok(_) = NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S") {
-                return true;
-            }
+        if patterns.datetime.is_match(value)
+            && NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S").is_ok()
+        {
+            return true;
         }
 
         // Try custom format if different
-        if self.datetime_format != "%Y-%m-%d %H:%M:%S" {
-            if let Ok(_) = NaiveDateTime::parse_from_str(value, &self.datetime_format) {
-                return true;
-            }
+        if self.datetime_format != "%Y-%m-%d %H:%M:%S"
+            && NaiveDateTime::parse_from_str(value, &self.datetime_format).is_ok()
+        {
+            return true;
         }
 
         false

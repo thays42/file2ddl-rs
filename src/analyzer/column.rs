@@ -18,7 +18,12 @@ pub struct ColumnAnalyzer {
 }
 
 impl ColumnAnalyzer {
-    pub fn new(name: String, inferencer: TypeInferencer, null_values: Vec<String>, verbose: bool) -> Self {
+    pub fn new(
+        name: String,
+        inferencer: TypeInferencer,
+        null_values: Vec<String>,
+        verbose: bool,
+    ) -> Self {
         let mut null_set = HashSet::new();
         null_set.insert("".to_string());
         null_set.insert("NULL".to_string());
@@ -101,15 +106,22 @@ impl ColumnAnalyzer {
         if self.first_non_null_type.is_none() {
             self.first_non_null_type = Some(new_type.clone());
             self.stats.sql_type = new_type.clone();
-            
+
             if self.verbose {
-                eprintln!("Column '{}' initial type set to {} on row {} with value: '{}'", 
-                          self.stats.name, new_type, self.current_row, value);
+                eprintln!(
+                    "Column '{}' initial type set to {} on row {} with value: '{}'",
+                    self.stats.name, new_type, self.current_row, value
+                );
             }
-            
+
             // Also log for RUST_LOG debug mode
-            log::debug!("Column '{}' initial type set to {} on row {} with value: '{}'", 
-                       self.stats.name, new_type, self.current_row, value);
+            log::debug!(
+                "Column '{}' initial type set to {} on row {} with value: '{}'",
+                self.stats.name,
+                new_type,
+                self.current_row,
+                value
+            );
             return;
         }
 
@@ -131,14 +143,14 @@ impl ColumnAnalyzer {
                     self.current_row, self.stats.sql_type, promoted_type, value
                 );
                 self.stats.type_promotions.push(promotion_msg.clone());
-                
+
                 if self.verbose {
                     eprintln!("Column '{}' {}", self.stats.name, promotion_msg);
                 }
-                
+
                 // Also log for RUST_LOG debug mode
                 log::debug!("Column '{}' {}", self.stats.name, promotion_msg);
-                
+
                 self.stats.sql_type = promoted_type;
             }
         }
@@ -248,14 +260,18 @@ mod tests {
 
         let stats = analyzer.get_stats();
         assert_eq!(stats.sql_type, SqlType::BigInt);
-        assert!(stats.type_promotions.len() > 0);
+        assert!(!stats.type_promotions.is_empty());
     }
 
     #[test]
     fn test_null_handling() {
         let inferencer = TypeInferencer::new();
-        let mut analyzer =
-            ColumnAnalyzer::new("test_col".to_string(), inferencer, vec!["N/A".to_string()], false);
+        let mut analyzer = ColumnAnalyzer::new(
+            "test_col".to_string(),
+            inferencer,
+            vec!["N/A".to_string()],
+            false,
+        );
 
         analyzer.analyze_value("123", 1);
         analyzer.analyze_value("", 2);

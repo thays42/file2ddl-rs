@@ -46,7 +46,11 @@ pub struct ParseArgs {
     #[arg(long, help = "File to write bad rows to")]
     pub badfile: Option<PathBuf>,
 
-    #[arg(long, default_value = "100", help = "Maximum bad rows to output (use 'all' for unlimited)")]
+    #[arg(
+        long,
+        default_value = "100",
+        help = "Maximum bad rows to output (use 'all' for unlimited)"
+    )]
     pub badmax: String,
 
     #[arg(long, default_value = "utf-8", help = "Input file encoding")]

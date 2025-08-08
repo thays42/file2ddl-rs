@@ -10,7 +10,7 @@ fn test_basic_describe() {
     temp_file.write_all(csv_data.as_bytes()).unwrap();
 
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--",
             "describe",
@@ -38,7 +38,7 @@ fn test_ddl_generation() {
     temp_file.write_all(csv_data.as_bytes()).unwrap();
 
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--",
             "describe",
@@ -63,7 +63,7 @@ fn test_mysql_ddl() {
     temp_file.write_all(csv_data.as_bytes()).unwrap();
 
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--",
             "describe",
@@ -89,7 +89,7 @@ fn test_null_handling() {
     temp_file.write_all(csv_data.as_bytes()).unwrap();
 
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--",
             "describe",
@@ -114,7 +114,7 @@ fn test_date_inference() {
     temp_file.write_all(csv_data.as_bytes()).unwrap();
 
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--",
             "describe",
@@ -137,7 +137,7 @@ fn test_time_inference() {
     temp_file.write_all(csv_data.as_bytes()).unwrap();
 
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--",
             "describe",
@@ -160,7 +160,7 @@ fn test_datetime_inference() {
     temp_file.write_all(csv_data.as_bytes()).unwrap();
 
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--",
             "describe",
@@ -183,7 +183,7 @@ fn test_pipe_delimiter() {
     temp_file.write_all(csv_data.as_bytes()).unwrap();
 
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--",
             "describe",
@@ -208,7 +208,7 @@ fn test_stdin_input() {
     let csv_data = "test\n42\n";
 
     let mut child = Command::new("cargo")
-        .args(&["run", "--", "describe"])
+        .args(["run", "--", "describe"])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())

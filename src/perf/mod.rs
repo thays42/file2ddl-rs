@@ -7,6 +7,12 @@ pub struct PerfMetrics {
     memory_samples: Vec<(String, u64)>,
 }
 
+impl Default for PerfMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PerfMetrics {
     pub fn new() -> Self {
         Self {
@@ -18,7 +24,8 @@ impl PerfMetrics {
 
     /// Record a timing checkpoint with a label
     pub fn checkpoint(&mut self, label: &str) {
-        self.checkpoint_times.push((label.to_string(), Instant::now()));
+        self.checkpoint_times
+            .push((label.to_string(), Instant::now()));
     }
 
     /// Record approximate memory usage (if available)
@@ -26,7 +33,8 @@ impl PerfMetrics {
         // In a real implementation, this would measure actual memory usage
         // For now, we'll use a placeholder that could be extended with system calls
         let estimated_memory = self.estimate_memory_usage();
-        self.memory_samples.push((label.to_string(), estimated_memory));
+        self.memory_samples
+            .push((label.to_string(), estimated_memory));
     }
 
     /// Get elapsed time since creation
@@ -36,10 +44,14 @@ impl PerfMetrics {
 
     /// Get time between two checkpoints
     pub fn checkpoint_duration(&self, from: &str, to: &str) -> Option<Duration> {
-        let from_time = self.checkpoint_times.iter()
+        let from_time = self
+            .checkpoint_times
+            .iter()
             .find(|(label, _)| label == from)?
             .1;
-        let to_time = self.checkpoint_times.iter()
+        let to_time = self
+            .checkpoint_times
+            .iter()
             .find(|(label, _)| label == to)?
             .1;
         Some(to_time.duration_since(from_time))
@@ -49,7 +61,7 @@ impl PerfMetrics {
     pub fn print_summary(&self) {
         println!("=== Performance Summary ===");
         println!("Total elapsed: {:?}", self.elapsed());
-        
+
         if !self.checkpoint_times.is_empty() {
             println!("\nCheckpoints:");
             let start = self.start_time;
@@ -58,7 +70,7 @@ impl PerfMetrics {
                 println!("  {}: {:?}", label, duration);
             }
         }
-        
+
         if !self.memory_samples.is_empty() {
             println!("\nMemory samples:");
             for (label, memory) in &self.memory_samples {
@@ -83,7 +95,7 @@ pub struct BufferOptimizer;
 impl BufferOptimizer {
     /// Calculate optimal buffer size based on file size and available memory
     pub fn calculate_buffer_size(file_size: u64, available_memory: u64) -> usize {
-        const MIN_BUFFER: usize = 4096;    // 4KB minimum
+        const MIN_BUFFER: usize = 4096; // 4KB minimum
         const MAX_BUFFER: usize = 1048576; // 1MB maximum
         const DEFAULT_BUFFER: usize = 8192; // 8KB default
 
@@ -93,7 +105,7 @@ impl BufferOptimizer {
 
         // Use 1% of available memory, but stay within bounds
         let target_buffer = (available_memory / 100) as usize;
-        
+
         if target_buffer < MIN_BUFFER {
             MIN_BUFFER
         } else if target_buffer > MAX_BUFFER {
@@ -140,7 +152,7 @@ impl StreamingOptimizer {
             base_chunk
         };
 
-        adjusted_chunk.max(MIN_CHUNK).min(MAX_CHUNK)
+        adjusted_chunk.clamp(MIN_CHUNK, MAX_CHUNK)
     }
 
     /// Estimate memory usage for a given configuration
@@ -150,7 +162,7 @@ impl StreamingOptimizer {
 
         let cell_memory = (rows * columns) as u64 * BYTES_PER_CELL;
         let metadata_memory = columns as u64 * 256; // Per-column analysis overhead
-        
+
         BASE_OVERHEAD + cell_memory + metadata_memory
     }
 }
@@ -163,12 +175,12 @@ mod tests {
     fn test_buffer_size_calculation() {
         // Test minimum buffer
         assert_eq!(BufferOptimizer::calculate_buffer_size(0, 1024), 8192);
-        
+
         // Test maximum buffer constraint
         let large_memory = 1024 * 1024 * 1024; // 1GB
         let buffer_size = BufferOptimizer::calculate_buffer_size(1000000, large_memory);
         assert!(buffer_size <= 1048576); // Should not exceed 1MB
-        
+
         // Test power of 2 alignment
         let buffer_size = BufferOptimizer::calculate_buffer_size(10000, 100000);
         assert!(buffer_size.is_power_of_two());
@@ -177,21 +189,23 @@ mod tests {
     #[test]
     fn test_chunk_size_calculation() {
         // Test with different column counts
-        assert!(StreamingOptimizer::calculate_chunk_size(10000, 5) >= 
-                StreamingOptimizer::calculate_chunk_size(10000, 100));
-        
+        assert!(
+            StreamingOptimizer::calculate_chunk_size(10000, 5)
+                >= StreamingOptimizer::calculate_chunk_size(10000, 100)
+        );
+
         // Test bounds
         let chunk_size = StreamingOptimizer::calculate_chunk_size(1000000, 200);
-        assert!(chunk_size >= 100 && chunk_size <= 10000);
+        assert!((100..=10000).contains(&chunk_size));
     }
 
     #[test]
     fn test_perf_metrics() {
         let mut metrics = PerfMetrics::new();
-        
+
         std::thread::sleep(Duration::from_millis(10));
         metrics.checkpoint("test_point");
-        
+
         assert!(metrics.elapsed() >= Duration::from_millis(10));
         assert_eq!(metrics.checkpoint_times.len(), 1);
     }
