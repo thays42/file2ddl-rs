@@ -2,6 +2,7 @@ pub mod analyzer;
 pub mod cli;
 pub mod ddl;
 pub mod parser;
+pub mod perf;
 pub mod types;
 pub mod utils;
 

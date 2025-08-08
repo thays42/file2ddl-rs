@@ -1,5 +1,6 @@
 pub mod column;
 pub mod inference;
+pub mod optimized;
 pub mod patterns;
 
 use crate::cli::{DatabaseType, DescribeArgs};

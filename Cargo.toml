@@ -14,8 +14,21 @@ thiserror = "1.0"
 log = "0.4"
 env_logger = "0.11"
 regex = "1.10"
+tempfile = "3.0"
 
 [dev-dependencies]
 tempfile = "3.0"
 criterion = "0.5"
 proptest = "1.0"
+
+[[bench]]
+name = "csv_parsing"
+harness = false
+
+[[bench]]
+name = "type_inference"
+harness = false
+
+[[bench]]
+name = "memory_profile"
+harness = false
