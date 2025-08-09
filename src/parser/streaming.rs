@@ -75,7 +75,7 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
                 if let Some(expected) = expected_field_count {
                     if record.len() != expected {
                         bad_row_count += 1;
-                        
+
                         // Create user-friendly error message
                         let error_msg = format!(
                             "Line {} has {} fields, but expected {} fields",
@@ -83,10 +83,10 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
                             record.len(),
                             expected
                         );
-                        
+
                         eprintln!("{}", error_msg);
                         let _ = std::io::stderr().flush(); // Ensure error message is displayed immediately
-                        
+
                         if args.verbose {
                             eprintln!("Row content: {:?}", record.iter().collect::<Vec<_>>());
                         }
@@ -114,7 +114,7 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
                         continue; // Skip processing this record
                     }
                 }
-                
+
                 let null_transformed = transform_nulls(&record, args);
                 let processed_record = substitute_newlines(&null_transformed, args);
                 writer.write_record(&processed_record)?;
@@ -178,11 +178,11 @@ fn create_bad_row_writer(path: &PathBuf, args: &ParseArgs) -> Result<csv::Writer
     writer_builder
         .delimiter(args.delimiter as u8)
         .flexible(true); // Allow variable field counts for error records
-    
+
     if let Some(quote_byte) = args.quote.as_byte() {
         writer_builder.quote(quote_byte);
     }
-    
+
     let writer = writer_builder.from_writer(file);
     Ok(writer)
 }
@@ -316,16 +316,22 @@ impl<R: Read> Iterator for ParsedCsvReader<R> {
 
                                     eprintln!("Error: {}", error_msg);
                                     let _ = std::io::stderr().flush(); // Ensure error message is displayed immediately
-                                    
+
                                     if self.args.verbose {
-                                        eprintln!("Row content: {:?}", record.iter().collect::<Vec<_>>());
+                                        eprintln!(
+                                            "Row content: {:?}",
+                                            record.iter().collect::<Vec<_>>()
+                                        );
                                     }
 
                                     // Stop processing if we exceed badmax (unless "all")
                                     if let Some(max_bad) = max_bad_rows {
                                         if self.bad_row_count > max_bad {
                                             if self.args.verbose {
-                                                eprintln!("Maximum bad rows ({}) exceeded, stopping", max_bad);
+                                                eprintln!(
+                                                    "Maximum bad rows ({}) exceeded, stopping",
+                                                    max_bad
+                                                );
                                             }
                                             self.finished = true;
                                             return Some(Err(anyhow::anyhow!(
@@ -340,13 +346,15 @@ impl<R: Read> Iterator for ParsedCsvReader<R> {
 
                             // Apply parse command transformations
                             let null_transformed = transform_nulls(&record, &self.args);
-                            let processed_record = substitute_newlines(&null_transformed, &self.args);
+                            let processed_record =
+                                substitute_newlines(&null_transformed, &self.args);
                             return Some(Ok(processed_record));
                         }
                         Err(e) => {
                             self.bad_row_count += 1;
 
-                            let error_msg = format!("Error reading row {}: {}", self.total_rows + 1, e);
+                            let error_msg =
+                                format!("Error reading row {}: {}", self.total_rows + 1, e);
                             eprintln!("{}", error_msg);
                             let _ = std::io::stderr().flush(); // Ensure error message is displayed immediately
 
@@ -354,7 +362,10 @@ impl<R: Read> Iterator for ParsedCsvReader<R> {
                             if let Some(max_bad) = max_bad_rows {
                                 if self.bad_row_count > max_bad {
                                     if self.args.verbose {
-                                        eprintln!("Maximum bad rows ({}) exceeded, stopping", max_bad);
+                                        eprintln!(
+                                            "Maximum bad rows ({}) exceeded, stopping",
+                                            max_bad
+                                        );
                                     }
                                     self.finished = true;
                                     return Some(Err(anyhow::anyhow!(

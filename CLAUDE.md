@@ -51,6 +51,18 @@ cargo run -- parse -i tests/data/pipe_delimited.txt -o output.csv -d '|'
 
 # Analyze pipe-delimited file
 cargo run -- describe -i tests/data/pipe_delimited.txt -d '|' --ddl
+
+# Diagnose CSV file for structural issues
+cargo run -- diagnose -i data.csv
+
+# Diagnose with custom field count expectation
+cargo run -- diagnose -i data.csv --fields 5
+
+# Diagnose without header row
+cargo run -- diagnose -i data.csv --noheader
+
+# Limit diagnosis to first 50 problematic rows
+cargo run -- diagnose -i data.csv --badmax 50
 ```
 
 ## Project Structure
@@ -204,6 +216,7 @@ DATETIME -> VARCHAR
 ## Current Capabilities
 - ✅ **Parse Command**: Stream CSV with configurable delimiters, quotes, null handling
 - ✅ **Describe Command**: Full type inference with statistical analysis
+- ✅ **Diagnose Command**: CSV file structural analysis with error categorization and reporting
 - ✅ **DDL Generation**: CREATE TABLE statements for major databases
 - ✅ **Type System**: Complete SQL type hierarchy with intelligent promotions
 - ✅ **Streaming Architecture**: Memory-efficient processing of large files

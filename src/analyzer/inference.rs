@@ -263,7 +263,7 @@ impl StreamingInferenceEngine {
         // Check for field count mismatch - fail fast like parse command
         let expected_fields = self.headers.len();
         let actual_fields = record.len();
-        
+
         if actual_fields != expected_fields {
             let error_msg = format!(
                 "Line {} has {} fields, but expected {} fields",
@@ -271,23 +271,23 @@ impl StreamingInferenceEngine {
                 actual_fields,
                 expected_fields
             );
-            
+
             eprintln!("Error: {}", error_msg);
             let _ = std::io::stderr().flush(); // Ensure error message is displayed immediately
-            
+
             if self.verbose {
                 eprintln!("Row content: {:?}", record.iter().collect::<Vec<_>>());
             }
 
             self.error_count += 1;
-            
+
             if self.error_count >= self.max_errors {
                 return Err(anyhow::anyhow!(
                     "Parsing failed with {} error(s)",
                     self.error_count
                 ));
             }
-            
+
             // If we're allowing errors, still continue processing but mark as error
             return Ok(());
         }
@@ -299,7 +299,7 @@ impl StreamingInferenceEngine {
                 analyzer.analyze_value(&processed_field, self.row_count);
             }
         }
-        
+
         Ok(())
     }
 
@@ -357,7 +357,8 @@ mod tests {
         let csv_data = "id,name,age,active\n1,Alice,25,true\n2,Bob,30,false\n3,Charlie,35,true";
         let cursor = Cursor::new(csv_data);
 
-        let mut engine = StreamingInferenceEngine::new(vec![], None, None, None, 100, false, " ".to_string());
+        let mut engine =
+            StreamingInferenceEngine::new(vec![], None, None, None, 100, false, " ".to_string());
 
         let stats = engine.analyze_csv_reader(cursor, b',', Some(b'"')).unwrap();
 
@@ -376,8 +377,15 @@ mod tests {
         let csv_data = "id,value\n1,100\n2,\n3,NULL\n4,200";
         let cursor = Cursor::new(csv_data);
 
-        let mut engine =
-            StreamingInferenceEngine::new(vec!["NULL".to_string()], None, None, None, 100, false, " ".to_string());
+        let mut engine = StreamingInferenceEngine::new(
+            vec!["NULL".to_string()],
+            None,
+            None,
+            None,
+            100,
+            false,
+            " ".to_string(),
+        );
 
         let stats = engine.analyze_csv_reader(cursor, b',', Some(b'"')).unwrap();
 
@@ -414,7 +422,8 @@ mod tests {
         let csv_data = "a,b,c\n1,2,3\n4,5\n6"; // Second row missing c, third row missing b and c
         let cursor = Cursor::new(csv_data);
 
-        let mut engine = StreamingInferenceEngine::new(vec![], None, None, None, 0, false, " ".to_string());
+        let mut engine =
+            StreamingInferenceEngine::new(vec![], None, None, None, 0, false, " ".to_string());
 
         // With max_errors = 0, this should fail on the first field count mismatch
         let result = engine.analyze_csv_reader(cursor, b',', Some(b'"'));

@@ -1,10 +1,10 @@
 pub mod streaming;
 
-pub use streaming::ParsedCsvReader;
 use crate::cli::ParseArgs;
 use anyhow::{Context, Result};
 use encoding_rs::Encoding;
 use std::io::{BufReader, BufWriter, Read, Write};
+pub use streaming::ParsedCsvReader;
 
 pub fn parse_command(args: ParseArgs) -> Result<()> {
     let input: Box<dyn Read> = match &args.input {

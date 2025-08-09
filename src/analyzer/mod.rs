@@ -1,9 +1,10 @@
 pub mod column;
+pub mod diagnose;
 pub mod inference;
 pub mod optimized;
 pub mod patterns;
 
-use crate::cli::{DatabaseType, DescribeArgs, ParseArgs};
+use crate::cli::{DatabaseType, DescribeArgs, DiagnoseArgs, ParseArgs};
 use crate::parser::ParsedCsvReader;
 use crate::types::ColumnStats;
 use anyhow::{Context, Result};
@@ -96,14 +97,14 @@ fn convert_describe_to_parse_args(args: &DescribeArgs) -> ParseArgs {
         input: args.input.clone(),
         output: None, // describe doesn't write output files
         delimiter: args.delimiter,
-        quote: args.quote.clone(),
+        quote: args.quote,
         escquote: args.escquote,
         fnull: args.fnull.clone(),
-        tnull: String::new(), // describe analyzes original null values
-        badfile: None, // describe doesn't write bad files
-        badmax: "0".to_string(), // describe fails on first error like original
-        noheader: false, // describe always expects headers
-        max_line_length: 1048576, // default from parse command
+        tnull: String::new(),          // describe analyzes original null values
+        badfile: None,                 // describe doesn't write bad files
+        badmax: "0".to_string(),       // describe fails on first error like original
+        noheader: false,               // describe always expects headers
+        max_line_length: 1048576,      // default from parse command
         encoding: "utf-8".to_string(), // default encoding
         verbose: args.verbose,
         sub_newline: args.sub_newline.clone(),
@@ -241,4 +242,44 @@ fn truncate_string(s: &str, max_len: usize) -> String {
     } else {
         format!("{}...", &s[..max_len.saturating_sub(3)])
     }
+}
+
+pub fn diagnose_command(args: DiagnoseArgs) -> Result<()> {
+    if args.verbose {
+        info!("Starting diagnose command analysis");
+        debug!("Arguments: {:?}", args);
+    }
+
+    // Create input reader with encoding support
+    let input: Box<dyn Read> = match &args.input {
+        Some(path) => Box::new(File::open(path)?),
+        None => Box::new(std::io::stdin()),
+    };
+
+    // Handle encoding
+    let encoding = Encoding::for_label(args.encoding.as_bytes())
+        .with_context(|| format!("Unsupported encoding: {}", args.encoding))?;
+
+    let reader: Box<dyn Read> = if encoding == encoding_rs::UTF_8 {
+        input
+    } else {
+        // For non-UTF8 encodings, we need to decode first
+        let decoded_reader = crate::parser::EncodingReader::new(input, encoding);
+        Box::new(decoded_reader)
+    };
+
+    // Run diagnosis
+    let summary = diagnose::diagnose_csv(reader, &args)?;
+
+    // Print results
+    diagnose::print_diagnostic_summary(&summary);
+
+    if args.verbose {
+        info!(
+            "Diagnosis complete: {} total lines, {} problematic lines",
+            summary.total_lines, summary.problematic_lines
+        );
+    }
+
+    Ok(())
 }

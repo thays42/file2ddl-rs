@@ -12,6 +12,7 @@ pub struct Cli {
 pub enum Commands {
     Parse(ParseArgs),
     Describe(DescribeArgs),
+    Diagnose(DiagnoseArgs),
 }
 
 #[derive(Parser)]
@@ -65,7 +66,11 @@ pub struct ParseArgs {
     #[arg(short, long, help = "Verbose output")]
     pub verbose: bool,
 
-    #[arg(long, default_value = " ", help = "Character to substitute for intrafield newlines")]
+    #[arg(
+        long,
+        default_value = " ",
+        help = "Character to substitute for intrafield newlines"
+    )]
     pub sub_newline: String,
 }
 
@@ -125,7 +130,64 @@ pub struct DescribeArgs {
     #[arg(short, long, help = "Verbose output")]
     pub verbose: bool,
 
-    #[arg(long, default_value = " ", help = "Character to substitute for intrafield newlines")]
+    #[arg(
+        long,
+        default_value = " ",
+        help = "Character to substitute for intrafield newlines"
+    )]
+    pub sub_newline: String,
+}
+
+#[derive(Parser, Debug)]
+pub struct DiagnoseArgs {
+    #[arg(short, long, help = "Input file path (default: stdin)")]
+    pub input: Option<PathBuf>,
+
+    #[arg(short, long, default_value = ",", help = "Field delimiter")]
+    pub delimiter: char,
+
+    #[arg(
+        short,
+        long,
+        value_enum,
+        default_value = "double",
+        help = "Quote character"
+    )]
+    pub quote: QuoteStyle,
+
+    #[arg(long, help = "Quote escape character")]
+    pub escquote: Option<char>,
+
+    #[arg(
+        long,
+        help = "Expected number of fields per row (auto-detected from first line if not specified)"
+    )]
+    pub fields: Option<usize>,
+
+    #[arg(
+        long,
+        default_value = "100",
+        help = "Maximum problematic rows to analyze before stopping"
+    )]
+    pub badmax: usize,
+
+    #[arg(long, default_value = "utf-8", help = "Input file encoding")]
+    pub encoding: String,
+
+    #[arg(short = 'H', long, help = "File does not start with column headers")]
+    pub noheader: bool,
+
+    #[arg(long, default_value = "1048576", help = "Maximum line length in bytes")]
+    pub max_line_length: usize,
+
+    #[arg(short, long, help = "Verbose output")]
+    pub verbose: bool,
+
+    #[arg(
+        long,
+        default_value = " ",
+        help = "Character to substitute for intrafield newlines"
+    )]
     pub sub_newline: String,
 }
 

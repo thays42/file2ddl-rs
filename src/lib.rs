@@ -17,5 +17,6 @@ pub fn run() -> Result<()> {
     match cli.command {
         Commands::Parse(args) => parser::parse_command(args),
         Commands::Describe(args) => analyzer::describe_command(args),
+        Commands::Diagnose(args) => analyzer::diagnose_command(args),
     }
 }
