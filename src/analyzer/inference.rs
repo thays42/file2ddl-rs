@@ -1,11 +1,12 @@
 use crate::analyzer::{column::ColumnAnalyzer, patterns::TypeInferencer};
+use crate::parser::ParsedCsvReader;
 use crate::types::ColumnStats;
 use anyhow::{Context, Result};
 use csv::ReaderBuilder;
 use log;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 
 pub struct StreamingInferenceEngine {
     analyzers: HashMap<usize, ColumnAnalyzer>,
@@ -65,6 +66,97 @@ impl StreamingInferenceEngine {
         let stdin = std::io::stdin();
         let buf_reader = BufReader::new(stdin.lock());
         self.analyze_csv_reader(buf_reader, delimiter, quote)
+    }
+
+    /// Analyze CSV using the parse command's processing logic
+    /// This ensures all parse command features are applied consistently
+    pub fn analyze_with_parsed_reader<R: Read>(
+        &mut self,
+        mut parsed_reader: ParsedCsvReader<R>,
+    ) -> Result<Vec<ColumnStats>> {
+        // Read headers
+        self.headers = parsed_reader.headers()?.clone();
+
+        if self.verbose {
+            eprintln!("Found {} columns: {:?}", self.headers.len(), self.headers);
+        }
+
+        // Also log for RUST_LOG debug mode
+        log::debug!("Found {} columns: {:?}", self.headers.len(), self.headers);
+
+        // Initialize analyzers for each column
+        for (i, header) in self.headers.iter().enumerate() {
+            let analyzer = ColumnAnalyzer::new(
+                header.clone(),
+                self.inferencer.clone(),
+                self.null_values.clone(),
+                self.verbose,
+            );
+            self.analyzers.insert(i, analyzer);
+        }
+
+        // Process each record from the parsed reader
+        for result in &mut parsed_reader {
+            match result {
+                Ok(record) => {
+                    self.row_count += 1;
+
+                    if self.verbose && self.row_count % 10000 == 0 {
+                        eprintln!("Processed {} rows", self.row_count);
+                    }
+
+                    // Also log for RUST_LOG debug mode (but with lower frequency to avoid spam)
+                    if self.row_count % 10000 == 0 {
+                        log::debug!("Processed {} rows", self.row_count);
+                    }
+
+                    // Process each field in the record
+                    for (i, field) in record.iter().enumerate() {
+                        if let Some(analyzer) = self.analyzers.get_mut(&i) {
+                            // Note: field is already processed by ParsedCsvReader (nulls transformed, newlines substituted)
+                            analyzer.analyze_value(field, self.row_count);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Error already handled by ParsedCsvReader, just propagate
+                    return Err(e);
+                }
+            }
+        }
+
+        // Get final stats from parsed reader
+        self.error_count = parsed_reader.get_error_count();
+        let total_processed = parsed_reader.get_total_rows();
+
+        // Finalize all analyzers
+        for analyzer in self.analyzers.values_mut() {
+            analyzer.finalize();
+        }
+
+        if self.verbose {
+            eprintln!(
+                "Analysis complete. Processed {} rows with {} errors.",
+                total_processed, self.error_count
+            );
+        }
+
+        // Also log for RUST_LOG debug mode
+        log::debug!(
+            "Analysis complete. Processed {} rows with {} errors.",
+            total_processed,
+            self.error_count
+        );
+
+        // Return column statistics in header order
+        let mut stats = Vec::new();
+        for i in 0..self.headers.len() {
+            if let Some(analyzer) = self.analyzers.remove(&i) {
+                stats.push(analyzer.into_stats());
+            }
+        }
+
+        Ok(stats)
     }
 
     fn analyze_csv_reader<R: BufRead>(

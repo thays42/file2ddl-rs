@@ -60,6 +60,7 @@ fn bench_type_inference_by_type(c: &mut Criterion) {
                         None,
                         1000,
                         false,
+                        " ".to_string(),
                     );
 
                     // Create temporary file for testing
@@ -95,6 +96,7 @@ fn bench_type_promotion_complexity(c: &mut Criterion) {
                 None,
                 1000,
                 false,
+                " ".to_string(),
             );
 
             // Create temporary file for testing
@@ -120,6 +122,7 @@ fn bench_type_promotion_complexity(c: &mut Criterion) {
                 None,
                 1000,
                 false,
+                " ".to_string(),
             );
 
             // Create temporary file for testing
@@ -159,6 +162,7 @@ fn bench_large_file_inference(c: &mut Criterion) {
                         None,
                         1000,
                         false,
+                        " ".to_string(),
                     );
 
                     // Create temporary file for testing

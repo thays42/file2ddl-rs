@@ -30,6 +30,7 @@ fn bench_memory_usage(c: &mut Criterion) {
                         None,
                         1000,
                         false,
+                        " ".to_string(),
                     );
 
                     let temp_file = tempfile::NamedTempFile::new().unwrap();
@@ -69,6 +70,7 @@ fn bench_buffer_sizes(c: &mut Criterion) {
                 None,
                 1000,
                 false,
+                " ".to_string(),
             );
 
             let temp_file = tempfile::NamedTempFile::new().unwrap();
@@ -113,6 +115,7 @@ fn bench_column_scaling(c: &mut Criterion) {
                         None,
                         1000,
                         false,
+                        " ".to_string(),
                     );
 
                     let temp_file = tempfile::NamedTempFile::new().unwrap();

@@ -1,5 +1,6 @@
 pub mod streaming;
 
+pub use streaming::ParsedCsvReader;
 use crate::cli::ParseArgs;
 use anyhow::{Context, Result};
 use encoding_rs::Encoding;
@@ -36,7 +37,7 @@ pub fn parse_command(args: ParseArgs) -> Result<()> {
 }
 
 // Custom reader that handles encoding conversion
-struct EncodingReader {
+pub struct EncodingReader {
     inner: Box<dyn Read>,
     encoding: &'static Encoding,
     buffer: Vec<u8>,
@@ -45,7 +46,7 @@ struct EncodingReader {
 }
 
 impl EncodingReader {
-    fn new(reader: Box<dyn Read>, encoding: &'static Encoding) -> Self {
+    pub fn new(reader: Box<dyn Read>, encoding: &'static Encoding) -> Self {
         Self {
             inner: reader,
             encoding,

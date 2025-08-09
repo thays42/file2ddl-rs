@@ -3,11 +3,15 @@ pub mod inference;
 pub mod optimized;
 pub mod patterns;
 
-use crate::cli::{DatabaseType, DescribeArgs};
+use crate::cli::{DatabaseType, DescribeArgs, ParseArgs};
+use crate::parser::ParsedCsvReader;
 use crate::types::ColumnStats;
-use anyhow::Result;
+use anyhow::{Context, Result};
+use encoding_rs::Encoding;
 use inference::StreamingInferenceEngine;
 use log::{debug, info};
+use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 
 pub fn describe_command(args: DescribeArgs) -> Result<()> {
@@ -15,6 +19,9 @@ pub fn describe_command(args: DescribeArgs) -> Result<()> {
         info!("Starting describe command analysis");
         debug!("Arguments: {:?}", args);
     }
+
+    // Convert DescribeArgs to ParseArgs to leverage parse command logic
+    let parse_args = convert_describe_to_parse_args(&args);
 
     // Prepare null values list - use provided fnull or defaults
     let null_values = if args.fnull.is_empty() {
@@ -34,16 +41,29 @@ pub fn describe_command(args: DescribeArgs) -> Result<()> {
         args.sub_newline.clone(),
     );
 
-    // Get delimiter and quote character
-    let delimiter = args.delimiter as u8;
-    let quote = args.quote.as_byte();
-
-    // Analyze the CSV data
-    let stats = if let Some(input_path) = &args.input {
-        engine.analyze_csv_file(input_path.to_string_lossy().as_ref(), delimiter, quote)?
-    } else {
-        engine.analyze_csv_stdin(delimiter, quote)?
+    // Create input reader with encoding support (like parse command)
+    let input: Box<dyn Read> = match &args.input {
+        Some(path) => Box::new(File::open(path)?),
+        None => Box::new(std::io::stdin()),
     };
+
+    // Handle encoding (same as parse command)
+    let encoding = Encoding::for_label(parse_args.encoding.as_bytes())
+        .with_context(|| format!("Unsupported encoding: {}", parse_args.encoding))?;
+
+    let reader: Box<dyn Read> = if encoding == encoding_rs::UTF_8 {
+        input
+    } else {
+        // For non-UTF8 encodings, we need to decode first
+        let decoded_reader = crate::parser::EncodingReader::new(input, encoding);
+        Box::new(decoded_reader)
+    };
+
+    // Create ParsedCsvReader that will apply all parse command transformations
+    let parsed_reader = ParsedCsvReader::new(reader, parse_args)?;
+
+    // Analyze using the parsed reader
+    let stats = engine.analyze_with_parsed_reader(parsed_reader)?;
 
     // Print type promotions if verbose
     if args.verbose {
@@ -68,6 +88,26 @@ pub fn describe_command(args: DescribeArgs) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Convert DescribeArgs to ParseArgs to reuse parse command logic
+fn convert_describe_to_parse_args(args: &DescribeArgs) -> ParseArgs {
+    ParseArgs {
+        input: args.input.clone(),
+        output: None, // describe doesn't write output files
+        delimiter: args.delimiter,
+        quote: args.quote.clone(),
+        escquote: args.escquote,
+        fnull: args.fnull.clone(),
+        tnull: String::new(), // describe analyzes original null values
+        badfile: None, // describe doesn't write bad files
+        badmax: "0".to_string(), // describe fails on first error like original
+        noheader: false, // describe always expects headers
+        max_line_length: 1048576, // default from parse command
+        encoding: "utf-8".to_string(), // default encoding
+        verbose: args.verbose,
+        sub_newline: args.sub_newline.clone(),
+    }
 }
 
 fn print_analysis_output(stats: &[ColumnStats], _verbose: bool) -> Result<()> {

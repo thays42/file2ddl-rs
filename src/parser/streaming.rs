@@ -215,6 +215,171 @@ fn substitute_newlines(record: &StringRecord, args: &ParseArgs) -> StringRecord 
     new_record
 }
 
+/// Streaming adapter that provides cleaned CSV records using parse command logic
+/// This allows the describe command to benefit from all parse command features
+pub struct ParsedCsvReader<R: Read> {
+    reader: csv::Reader<R>,
+    args: ParseArgs,
+    headers: Option<Vec<String>>,
+    bad_row_count: usize,
+    total_rows: usize,
+    expected_field_count: Option<usize>,
+    finished: bool,
+}
+
+impl<R: Read> ParsedCsvReader<R> {
+    pub fn new(input: R, args: ParseArgs) -> Result<Self> {
+        let mut reader_builder = ReaderBuilder::new();
+        reader_builder
+            .delimiter(args.delimiter as u8)
+            .has_headers(true)
+            .flexible(true); // Allow variable number of fields - we'll validate manually
+
+        // Set quote character
+        if let Some(quote_byte) = args.quote.as_byte() {
+            reader_builder.quote(quote_byte);
+        } else {
+            reader_builder.quoting(false);
+        }
+
+        // Set escape character if provided
+        if let Some(esc) = args.escquote {
+            reader_builder.escape(Some(esc as u8));
+        }
+
+        let reader = reader_builder.from_reader(input);
+
+        Ok(ParsedCsvReader {
+            reader,
+            args,
+            headers: None,
+            bad_row_count: 0,
+            total_rows: 0,
+            expected_field_count: None,
+            finished: false,
+        })
+    }
+
+    pub fn headers(&mut self) -> Result<&Vec<String>> {
+        if self.headers.is_none() {
+            let headers = self.reader.headers()?.clone();
+            self.expected_field_count = Some(headers.len());
+            self.headers = Some(headers.iter().map(|h| h.to_string()).collect());
+        }
+        Ok(self.headers.as_ref().unwrap())
+    }
+
+    pub fn get_error_count(&self) -> usize {
+        self.bad_row_count
+    }
+
+    pub fn get_total_rows(&self) -> usize {
+        self.total_rows
+    }
+}
+
+impl<R: Read> Iterator for ParsedCsvReader<R> {
+    type Item = Result<StringRecord>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.finished {
+            return None;
+        }
+
+        // Parse badmax - support "all" for unlimited
+        let max_bad_rows = if self.args.badmax == "all" {
+            None
+        } else {
+            Some(self.args.badmax.parse::<usize>().unwrap_or(0))
+        };
+
+        loop {
+            match self.reader.records().next() {
+                Some(result) => {
+                    self.total_rows += 1;
+
+                    match result {
+                        Ok(record) => {
+                            // Check field count consistency
+                            if let Some(expected) = self.expected_field_count {
+                                if record.len() != expected {
+                                    self.bad_row_count += 1;
+
+                                    // Create user-friendly error message
+                                    let error_msg = format!(
+                                        "Line {} has {} fields, but expected {} fields",
+                                        self.total_rows + 1, // +1 because we count header as row 1
+                                        record.len(),
+                                        expected
+                                    );
+
+                                    if self.args.verbose {
+                                        eprintln!("{}", error_msg);
+                                        eprintln!("Row content: {:?}", record.iter().collect::<Vec<_>>());
+                                    }
+
+                                    // Stop processing if we exceed badmax (unless "all")
+                                    if let Some(max_bad) = max_bad_rows {
+                                        if self.bad_row_count > max_bad {
+                                            if self.args.verbose {
+                                                eprintln!("Maximum bad rows ({}) exceeded, stopping", max_bad);
+                                            }
+                                            self.finished = true;
+                                            return Some(Err(anyhow::anyhow!(
+                                                "Parsing failed with {} error(s)",
+                                                self.bad_row_count
+                                            )));
+                                        }
+                                    }
+                                    continue; // Skip processing this record
+                                }
+                            }
+
+                            // Apply parse command transformations
+                            let null_transformed = transform_nulls(&record, &self.args);
+                            let processed_record = substitute_newlines(&null_transformed, &self.args);
+                            return Some(Ok(processed_record));
+                        }
+                        Err(e) => {
+                            self.bad_row_count += 1;
+
+                            if self.args.verbose {
+                                eprintln!("Error reading row {}: {}", self.total_rows + 1, e);
+                            }
+
+                            // Stop processing if we exceed badmax (unless "all")
+                            if let Some(max_bad) = max_bad_rows {
+                                if self.bad_row_count > max_bad {
+                                    if self.args.verbose {
+                                        eprintln!("Maximum bad rows ({}) exceeded, stopping", max_bad);
+                                    }
+                                    self.finished = true;
+                                    return Some(Err(anyhow::anyhow!(
+                                        "Parsing failed with {} error(s)",
+                                        self.bad_row_count
+                                    )));
+                                }
+                            }
+                            continue; // Skip this record and try next
+                        }
+                    }
+                }
+                None => {
+                    // End of input - return error if we had bad rows
+                    if self.bad_row_count > 0 {
+                        self.finished = true;
+                        return Some(Err(anyhow::anyhow!(
+                            "Parsing failed with {} error(s)",
+                            self.bad_row_count
+                        )));
+                    }
+                    return None;
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
