@@ -31,6 +31,7 @@ pub fn describe_command(args: DescribeArgs) -> Result<()> {
         args.fdatetime,
         100, // max errors
         args.verbose,
+        args.sub_newline.clone(),
     );
 
     // Get delimiter and quote character

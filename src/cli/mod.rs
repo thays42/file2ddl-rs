@@ -64,6 +64,9 @@ pub struct ParseArgs {
 
     #[arg(short, long, help = "Verbose output")]
     pub verbose: bool,
+
+    #[arg(long, default_value = " ", help = "Character to substitute for intrafield newlines")]
+    pub sub_newline: String,
 }
 
 #[derive(Parser, Debug)]
@@ -121,6 +124,9 @@ pub struct DescribeArgs {
 
     #[arg(short, long, help = "Verbose output")]
     pub verbose: bool,
+
+    #[arg(long, default_value = " ", help = "Character to substitute for intrafield newlines")]
+    pub sub_newline: String,
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]

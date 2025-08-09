@@ -15,6 +15,7 @@ pub struct AnalysisConfig {
     pub time_format: Option<String>,
     pub datetime_format: Option<String>,
     pub max_errors: usize,
+    pub sub_newline: String,
 }
 
 impl Default for AnalysisConfig {
@@ -27,6 +28,7 @@ impl Default for AnalysisConfig {
             time_format: None,
             datetime_format: None,
             max_errors: 100,
+            sub_newline: " ".to_string(),
         }
     }
 }
@@ -101,6 +103,7 @@ impl OptimizedAnalyzer {
             config.datetime_format,
             config.max_errors,
             self.verbose,
+            config.sub_newline,
         );
 
         self.perf_metrics.checkpoint("engine_created");
@@ -206,6 +209,7 @@ impl PerformanceTester {
                 time_format: None,
                 datetime_format: None,
                 max_errors: 1000,
+                sub_newline: " ".to_string(),
             };
             let _results = analyzer.analyze_file(temp_file.path().to_str().unwrap(), config)?;
 
@@ -286,6 +290,7 @@ mod tests {
             time_format: None,
             datetime_format: None,
             max_errors: 100,
+            sub_newline: " ".to_string(),
         };
         let results = analyzer.analyze_file(temp_file.path().to_str().unwrap(), config)?;
 

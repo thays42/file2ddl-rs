@@ -19,6 +19,7 @@ fn test_small_file_performance() {
         time_format: None,
         datetime_format: None,
         max_errors: 1000,
+        sub_newline: " ".to_string(),
     };
     let _results = analyzer
         .analyze_file(temp_file.path().to_str().unwrap(), config)
@@ -51,6 +52,7 @@ fn test_medium_file_performance() {
         time_format: None,
         datetime_format: None,
         max_errors: 1000,
+        sub_newline: " ".to_string(),
     };
     let _results = analyzer
         .analyze_file(temp_file.path().to_str().unwrap(), config)
@@ -87,6 +89,7 @@ fn test_memory_scaling() {
             time_format: None,
             datetime_format: None,
             max_errors: 1000,
+        sub_newline: " ".to_string(),
         };
         let results = analyzer
             .analyze_file(temp_file.path().to_str().unwrap(), config)
@@ -118,6 +121,7 @@ fn test_column_scaling_performance() {
             time_format: None,
             datetime_format: None,
             max_errors: 1000,
+        sub_newline: " ".to_string(),
         };
         let results = analyzer
             .analyze_file(temp_file.path().to_str().unwrap(), config)
@@ -162,6 +166,7 @@ fn test_type_inference_performance() {
             time_format: None,
             datetime_format: None,
             max_errors: 1000,
+        sub_newline: " ".to_string(),
         };
         let _results = analyzer
             .analyze_file(temp_file.path().to_str().unwrap(), config)

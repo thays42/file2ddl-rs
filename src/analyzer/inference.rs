@@ -16,6 +16,7 @@ pub struct StreamingInferenceEngine {
     inferencer: TypeInferencer,
     null_values: Vec<String>,
     verbose: bool,
+    sub_newline: String,
 }
 
 impl StreamingInferenceEngine {
@@ -26,6 +27,7 @@ impl StreamingInferenceEngine {
         datetime_format: Option<String>,
         max_errors: usize,
         verbose: bool,
+        sub_newline: String,
     ) -> Self {
         let inferencer = TypeInferencer::with_formats(date_format, time_format, datetime_format);
 
@@ -38,6 +40,7 @@ impl StreamingInferenceEngine {
             inferencer,
             null_values,
             verbose,
+            sub_newline,
         }
     }
 
@@ -184,7 +187,8 @@ impl StreamingInferenceEngine {
             }
 
             if let Some(analyzer) = self.analyzers.get_mut(&i) {
-                analyzer.analyze_value(field, self.row_count);
+                let processed_field = field.replace('\n', &self.sub_newline).replace('\r', "");
+                analyzer.analyze_value(&processed_field, self.row_count);
             }
         }
 
@@ -267,7 +271,7 @@ mod tests {
         let csv_data = "id,name,age,active\n1,Alice,25,true\n2,Bob,30,false\n3,Charlie,35,true";
         let cursor = Cursor::new(csv_data);
 
-        let mut engine = StreamingInferenceEngine::new(vec![], None, None, None, 100, false);
+        let mut engine = StreamingInferenceEngine::new(vec![], None, None, None, 100, false, " ".to_string());
 
         let stats = engine.analyze_csv_reader(cursor, b',', Some(b'"')).unwrap();
 
@@ -287,7 +291,7 @@ mod tests {
         let cursor = Cursor::new(csv_data);
 
         let mut engine =
-            StreamingInferenceEngine::new(vec!["NULL".to_string()], None, None, None, 100, false);
+            StreamingInferenceEngine::new(vec!["NULL".to_string()], None, None, None, 100, false, " ".to_string());
 
         let stats = engine.analyze_csv_reader(cursor, b',', Some(b'"')).unwrap();
 
@@ -309,6 +313,7 @@ mod tests {
             None,
             100,
             true, // verbose to capture promotions
+            " ".to_string(),
         );
 
         let stats = engine.analyze_csv_reader(cursor, b',', Some(b'"')).unwrap();
@@ -323,7 +328,7 @@ mod tests {
         let csv_data = "a,b,c\n1,2,3\n4,5\n6"; // Second row missing c, third row missing b and c
         let cursor = Cursor::new(csv_data);
 
-        let mut engine = StreamingInferenceEngine::new(vec![], None, None, None, 100, false);
+        let mut engine = StreamingInferenceEngine::new(vec![], None, None, None, 100, false, " ".to_string());
 
         let stats = engine.analyze_csv_reader(cursor, b',', Some(b'"')).unwrap();
 

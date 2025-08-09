@@ -67,7 +67,8 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
 
         match result {
             Ok(record) => {
-                let processed_record = transform_nulls(&record, args);
+                let null_transformed = transform_nulls(&record, args);
+                let processed_record = substitute_newlines(&null_transformed, args);
                 writer.write_record(&processed_record)?;
             }
             Err(e) => {
@@ -147,6 +148,17 @@ fn transform_nulls(record: &StringRecord, args: &ParseArgs) -> StringRecord {
     new_record
 }
 
+fn substitute_newlines(record: &StringRecord, args: &ParseArgs) -> StringRecord {
+    let mut new_record = StringRecord::new();
+
+    for field in record.iter() {
+        let field_with_subs = field.replace('\n', &args.sub_newline).replace('\r', "");
+        new_record.push_field(&field_with_subs);
+    }
+
+    new_record
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,6 +180,7 @@ mod tests {
             max_line_length: 1048576,
             encoding: "utf-8".to_string(),
             verbose: false,
+            sub_newline: " ".to_string(),
         }
     }
 
@@ -267,5 +280,46 @@ mod tests {
         let result = process_csv(Cursor::new(input), &mut output, &args);
 
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_intrafield_newlines_default() {
+        let input = "name,description,age\n\"Alice\",\"Has, comma\",30\n\"Bob\",\"Uses \"\"quotes\"\"\",25\n\"Charlie\",\"New \nline\",35";
+        let mut output = Vec::new();
+
+        let result = process_csv(Cursor::new(input), &mut output, &default_args());
+
+        assert!(result.is_ok());
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(output_str.contains("New  line")); // Two spaces because original has "New \nline"
+        assert!(!output_str.contains("New \n"));
+    }
+
+    #[test]
+    fn test_intrafield_newlines_custom_substitute() {
+        let input = "name,description\n\"Alice\",\"Line1\nLine2\nLine3\"";
+        let mut output = Vec::new();
+
+        let mut args = default_args();
+        args.sub_newline = " | ".to_string();
+
+        let result = process_csv(Cursor::new(input), &mut output, &args);
+
+        assert!(result.is_ok());
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(output_str.contains("Line1 | Line2 | Line3"));
+    }
+
+    #[test]
+    fn test_carriage_return_removal() {
+        let input = "name,description\n\"Alice\",\"Line1\r\nLine2\"";
+        let mut output = Vec::new();
+
+        let result = process_csv(Cursor::new(input), &mut output, &default_args());
+
+        assert!(result.is_ok());
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(output_str.contains("Line1 Line2"));
+        assert!(!output_str.contains('\r'));
     }
 }
