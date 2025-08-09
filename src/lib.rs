@@ -1,5 +1,6 @@
 pub mod analyzer;
 pub mod cli;
+pub mod database;
 pub mod parser;
 pub mod perf;
 pub mod types;

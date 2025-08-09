@@ -5,6 +5,7 @@ pub mod optimized;
 pub mod patterns;
 
 use crate::cli::{DatabaseType, DescribeArgs, DiagnoseArgs, ParseArgs};
+use crate::database::{get_database_dialect, get_database_dialect_from_config, DatabaseDialect};
 use crate::parser::ParsedCsvReader;
 use crate::types::ColumnStats;
 use anyhow::{Context, Result};
@@ -34,9 +35,9 @@ pub fn describe_command(args: DescribeArgs) -> Result<()> {
     // Create inference engine
     let mut engine = StreamingInferenceEngine::new(
         null_values,
-        args.fdate,
-        args.ftime,
-        args.fdatetime,
+        args.fdate.clone(),
+        args.ftime.clone(),
+        args.fdatetime.clone(),
         0, // max errors - fail on first error like parse command
         args.verbose,
         args.sub_newline.clone(),
@@ -73,7 +74,7 @@ pub fn describe_command(args: DescribeArgs) -> Result<()> {
 
     // Display results
     if args.ddl {
-        print_ddl_output(&stats, &args.database, args.input.as_deref())?;
+        print_ddl_output(&stats, &args.database, args.input.as_deref(), &args)?;
     } else {
         print_analysis_output(&stats, args.verbose)?;
     }
@@ -145,6 +146,7 @@ fn print_ddl_output(
     stats: &[ColumnStats],
     database: &DatabaseType,
     input_path: Option<&Path>,
+    args: &DescribeArgs,
 ) -> Result<()> {
     // Generate table name from input file or use default
     let table_name = if let Some(path) = input_path {
@@ -158,53 +160,30 @@ fn print_ddl_output(
     };
 
     // Print CREATE TABLE statement
-    match database {
-        DatabaseType::Postgres => print_postgres_ddl(&table_name, stats)?,
-        DatabaseType::Mysql => print_mysql_ddl(&table_name, stats)?,
-        DatabaseType::Netezza => print_netezza_ddl(&table_name, stats)?,
-    }
+    let dialect: Box<dyn DatabaseDialect> = if let Some(config_path) = &args.database_config {
+        if args.verbose {
+            info!("Using custom database configuration from: {:?}", config_path);
+        }
+        get_database_dialect_from_config(config_path)?
+    } else {
+        match database {
+            DatabaseType::Postgres => get_database_dialect("postgresql")?,
+            DatabaseType::Mysql => get_database_dialect("mysql")?,
+            DatabaseType::Netezza => get_database_dialect("netezza")?,
+        }
+    };
+    
+    print_ddl(&table_name, stats, dialect.as_ref())?;
 
     Ok(())
 }
 
-fn print_postgres_ddl(table_name: &str, stats: &[ColumnStats]) -> Result<()> {
+fn print_ddl(table_name: &str, stats: &[ColumnStats], dialect: &dyn DatabaseDialect) -> Result<()> {
     println!("CREATE TABLE {} (", table_name);
 
     for (i, stat) in stats.iter().enumerate() {
         let column_name = sanitize_column_name(&stat.name);
-        let data_type = stat.sql_type.to_postgres_ddl();
-        let nullable = if stat.is_nullable() { "" } else { " NOT NULL" };
-        let comma = if i == stats.len() - 1 { "" } else { "," };
-
-        println!("    {} {}{}{}", column_name, data_type, nullable, comma);
-    }
-
-    println!(");");
-    Ok(())
-}
-
-fn print_mysql_ddl(table_name: &str, stats: &[ColumnStats]) -> Result<()> {
-    println!("CREATE TABLE {} (", table_name);
-
-    for (i, stat) in stats.iter().enumerate() {
-        let column_name = sanitize_column_name(&stat.name);
-        let data_type = stat.sql_type.to_mysql_ddl();
-        let nullable = if stat.is_nullable() { "" } else { " NOT NULL" };
-        let comma = if i == stats.len() - 1 { "" } else { "," };
-
-        println!("    {} {}{}{}", column_name, data_type, nullable, comma);
-    }
-
-    println!(");");
-    Ok(())
-}
-
-fn print_netezza_ddl(table_name: &str, stats: &[ColumnStats]) -> Result<()> {
-    println!("CREATE TABLE {} (", table_name);
-
-    for (i, stat) in stats.iter().enumerate() {
-        let column_name = sanitize_column_name(&stat.name);
-        let data_type = stat.sql_type.to_netezza_ddl();
+        let data_type = stat.sql_type.to_ddl(dialect);
         let nullable = if stat.is_nullable() { "" } else { " NOT NULL" };
         let comma = if i == stats.len() - 1 { "" } else { "," };
 

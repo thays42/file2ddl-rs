@@ -100,6 +100,9 @@ pub struct DescribeArgs {
     #[arg(long, value_enum, default_value = "postgres", help = "Target database")]
     pub database: DatabaseType,
 
+    #[arg(long, help = "Database configuration file (JSON format)")]
+    pub database_config: Option<PathBuf>,
+
     #[arg(long, help = "Date format string")]
     pub fdate: Option<String>,
 

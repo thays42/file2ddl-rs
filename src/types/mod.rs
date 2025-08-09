@@ -100,49 +100,8 @@ impl SqlType {
         }
     }
 
-    pub fn to_postgres_ddl(&self) -> String {
-        match self {
-            SqlType::Boolean => "BOOLEAN".to_string(),
-            SqlType::SmallInt => "SMALLINT".to_string(),
-            SqlType::Integer => "INTEGER".to_string(),
-            SqlType::BigInt => "BIGINT".to_string(),
-            SqlType::DoublePrecision => "DOUBLE PRECISION".to_string(),
-            SqlType::Date => "DATE".to_string(),
-            SqlType::Time => "TIME".to_string(),
-            SqlType::DateTime => "TIMESTAMP".to_string(),
-            SqlType::Varchar(Some(n)) => format!("VARCHAR({})", n),
-            SqlType::Varchar(None) => "TEXT".to_string(),
-        }
-    }
-
-    pub fn to_mysql_ddl(&self) -> String {
-        match self {
-            SqlType::Boolean => "BOOLEAN".to_string(),
-            SqlType::SmallInt => "SMALLINT".to_string(),
-            SqlType::Integer => "INTEGER".to_string(),
-            SqlType::BigInt => "BIGINT".to_string(),
-            SqlType::DoublePrecision => "DOUBLE".to_string(),
-            SqlType::Date => "DATE".to_string(),
-            SqlType::Time => "TIME".to_string(),
-            SqlType::DateTime => "DATETIME".to_string(),
-            SqlType::Varchar(Some(n)) => format!("VARCHAR({})", n),
-            SqlType::Varchar(None) => "TEXT".to_string(),
-        }
-    }
-
-    pub fn to_netezza_ddl(&self) -> String {
-        match self {
-            SqlType::Boolean => "BOOLEAN".to_string(),
-            SqlType::SmallInt => "SMALLINT".to_string(),
-            SqlType::Integer => "INTEGER".to_string(),
-            SqlType::BigInt => "BIGINT".to_string(),
-            SqlType::DoublePrecision => "DOUBLE PRECISION".to_string(),
-            SqlType::Date => "DATE".to_string(),
-            SqlType::Time => "TIME".to_string(),
-            SqlType::DateTime => "TIMESTAMP".to_string(),
-            SqlType::Varchar(Some(n)) => format!("VARCHAR({})", n),
-            SqlType::Varchar(None) => "VARCHAR(65535)".to_string(),
-        }
+    pub fn to_ddl(&self, dialect: &dyn crate::database::DatabaseDialect) -> String {
+        dialect.map_type(self)
     }
 }
 

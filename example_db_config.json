@@ -1,0 +1,23 @@
+{
+  "name": "Oracle",
+  "type_mappings": {
+    "Boolean": "CHAR(1)",
+    "SmallInt": "NUMBER(5)",
+    "Integer": "NUMBER(10)",
+    "BigInt": "NUMBER(19)",
+    "DoublePrecision": "BINARY_DOUBLE",
+    "Date": "DATE",
+    "Time": "TIMESTAMP",
+    "DateTime": "TIMESTAMP",
+    "Varchar": "VARCHAR2({})",
+    "VarcharUnlimited": "CLOB"
+  },
+  "features": {
+    "unlimited_varchar": true,
+    "boolean_type": false,
+    "double_precision": true,
+    "timestamp_type": true
+  },
+  "default_varchar_length": 4000,
+  "unlimited_varchar_type": "CLOB"
+}
