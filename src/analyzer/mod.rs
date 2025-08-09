@@ -29,7 +29,7 @@ pub fn describe_command(args: DescribeArgs) -> Result<()> {
         args.fdate,
         args.ftime,
         args.fdatetime,
-        100, // max errors
+        0, // max errors - fail on first error like parse command
         args.verbose,
         args.sub_newline.clone(),
     );

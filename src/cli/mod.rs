@@ -48,7 +48,7 @@ pub struct ParseArgs {
 
     #[arg(
         long,
-        default_value = "100",
+        default_value = "0",
         help = "Maximum bad rows to output (use 'all' for unlimited)"
     )]
     pub badmax: String,

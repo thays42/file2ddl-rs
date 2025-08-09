@@ -168,52 +168,45 @@ impl StreamingInferenceEngine {
             log::debug!("Processed {} rows", self.row_count);
         }
 
-        // Process each field in the record
-        for (i, field) in record.iter().enumerate() {
-            if i >= self.headers.len() {
-                if self.verbose {
-                    eprintln!(
-                        "Row {} has more columns than headers. Ignoring extra columns.",
-                        self.row_count
-                    );
-                }
-
-                // Also log for RUST_LOG debug mode
-                log::warn!(
-                    "Row {} has more columns than headers. Ignoring extra columns.",
-                    self.row_count
-                );
-                break;
+        // Check for field count mismatch - fail fast like parse command
+        let expected_fields = self.headers.len();
+        let actual_fields = record.len();
+        
+        if actual_fields != expected_fields {
+            let error_msg = format!(
+                "Line {} has {} fields, but expected {} fields",
+                self.row_count + 1, // +1 because we count header as row 1
+                actual_fields,
+                expected_fields
+            );
+            
+            eprintln!("{}", error_msg);
+            
+            if self.verbose {
+                eprintln!("Row content: {:?}", record.iter().collect::<Vec<_>>());
             }
 
+            self.error_count += 1;
+            
+            if self.error_count >= self.max_errors {
+                return Err(anyhow::anyhow!(
+                    "Parsing failed with {} error(s)",
+                    self.error_count
+                ));
+            }
+            
+            // If we're allowing errors, still continue processing but mark as error
+            return Ok(());
+        }
+
+        // Process each field in the record (only if field count matches)
+        for (i, field) in record.iter().enumerate() {
             if let Some(analyzer) = self.analyzers.get_mut(&i) {
                 let processed_field = field.replace('\n', &self.sub_newline).replace('\r', "");
                 analyzer.analyze_value(&processed_field, self.row_count);
             }
         }
-
-        // Handle missing fields (fewer columns than headers)
-        if record.len() < self.headers.len() {
-            if self.verbose {
-                eprintln!(
-                    "Row {} has fewer columns than headers. Treating missing as null.",
-                    self.row_count
-                );
-            }
-
-            // Also log for RUST_LOG debug mode
-            log::debug!(
-                "Row {} has fewer columns than headers. Treating missing as null.",
-                self.row_count
-            );
-
-            for i in record.len()..self.headers.len() {
-                if let Some(analyzer) = self.analyzers.get_mut(&i) {
-                    analyzer.analyze_value("", self.row_count); // Empty string is treated as null
-                }
-            }
-        }
-
+        
         Ok(())
     }
 
@@ -328,13 +321,11 @@ mod tests {
         let csv_data = "a,b,c\n1,2,3\n4,5\n6"; // Second row missing c, third row missing b and c
         let cursor = Cursor::new(csv_data);
 
-        let mut engine = StreamingInferenceEngine::new(vec![], None, None, None, 100, false, " ".to_string());
+        let mut engine = StreamingInferenceEngine::new(vec![], None, None, None, 0, false, " ".to_string());
 
-        let stats = engine.analyze_csv_reader(cursor, b',', Some(b'"')).unwrap();
-
-        assert_eq!(stats.len(), 3);
-        assert_eq!(stats[0].null_count, 0); // Column 'a' has no nulls
-        assert_eq!(stats[1].null_count, 1); // Column 'b' missing in last row
-        assert_eq!(stats[2].null_count, 2); // Column 'c' missing in last 2 rows
+        // With max_errors = 0, this should fail on the first field count mismatch
+        let result = engine.analyze_csv_reader(cursor, b',', Some(b'"'));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Parsing failed"));
     }
 }

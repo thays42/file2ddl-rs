@@ -10,13 +10,13 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
     let max_bad_rows = if args.badmax == "all" {
         None
     } else {
-        Some(args.badmax.parse::<usize>().unwrap_or(100))
+        Some(args.badmax.parse::<usize>().unwrap_or(0))
     };
     let mut reader_builder = ReaderBuilder::new();
     reader_builder
         .delimiter(args.delimiter as u8)
         .has_headers(true)
-        .flexible(true); // Allow variable number of fields per record
+        .flexible(true); // Allow variable number of fields - we'll validate manually
 
     // Set quote character
     if let Some(quote_byte) = args.quote.as_byte() {
@@ -52,12 +52,16 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
 
     let mut bad_row_count = 0;
     let mut total_rows = 0;
+    let mut expected_field_count = None;
 
-    // Write headers if present
+    // Write headers if present and track expected field count
     if let Ok(headers) = reader.headers() {
+        expected_field_count = Some(headers.len());
         writer.write_record(headers)?;
         if let Some(ref mut bw) = bad_writer {
-            bw.write_record(headers)?;
+            // Write a different header for bad file to avoid field count mismatch
+            let bad_headers = StringRecord::from(vec!["Row", "Error"]);
+            bw.write_record(&bad_headers)?;
         }
     }
 
@@ -67,6 +71,49 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
 
         match result {
             Ok(record) => {
+                // Check field count consistency
+                if let Some(expected) = expected_field_count {
+                    if record.len() != expected {
+                        bad_row_count += 1;
+                        
+                        // Create user-friendly error message
+                        let error_msg = format!(
+                            "Line {} has {} fields, but expected {} fields",
+                            total_rows + 1, // +1 because we count header as row 1
+                            record.len(),
+                            expected
+                        );
+                        
+                        eprintln!("{}", error_msg);
+                        
+                        if args.verbose {
+                            eprintln!("Row content: {:?}", record.iter().collect::<Vec<_>>());
+                        }
+
+                        // Write to bad file if configured
+                        if let Some(ref mut bw) = bad_writer {
+                            if max_bad_rows.is_none() || bad_row_count <= max_bad_rows.unwrap() {
+                                let error_record = StringRecord::from(vec![
+                                    format!("Row {}", total_rows + 1),
+                                    error_msg,
+                                ]);
+                                bw.write_record(&error_record)?;
+                            }
+                        }
+
+                        // Stop processing if we exceed badmax (unless "all")
+                        if let Some(max_bad) = max_bad_rows {
+                            if bad_row_count > max_bad {
+                                if args.verbose {
+                                    eprintln!("Maximum bad rows ({}) exceeded, stopping", max_bad);
+                                }
+                                break;
+                            }
+                        }
+                        continue; // Skip processing this record
+                    }
+                }
+                
                 let null_transformed = transform_nulls(&record, args);
                 let processed_record = substitute_newlines(&null_transformed, args);
                 writer.write_record(&processed_record)?;
@@ -75,7 +122,7 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
                 bad_row_count += 1;
 
                 if args.verbose {
-                    eprintln!("Error reading row {}: {}", total_rows, e);
+                    eprintln!("Error reading row {}: {}", total_rows + 1, e);
                 }
 
                 // Write to bad file if configured
@@ -83,7 +130,7 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
                     if max_bad_rows.is_none() || bad_row_count <= max_bad_rows.unwrap() {
                         // Write error info as a CSV record
                         let error_record = StringRecord::from(vec![
-                            format!("Row {}", total_rows),
+                            format!("Row {}", total_rows + 1),
                             format!("{}", e),
                         ]);
                         bw.write_record(&error_record)?;
@@ -116,17 +163,26 @@ pub fn process_csv<R: Read, W: Write>(input: R, output: W, args: &ParseArgs) -> 
         );
     }
 
-    // Return error if we had bad rows and strict mode is enabled
-    // For now, we'll just report success since flexible mode is on
+    // Return error if we had bad rows - parsing should fail with non-zero exit code
+    if bad_row_count > 0 {
+        anyhow::bail!("Parsing failed with {} error(s)", bad_row_count);
+    }
+
     Ok(())
 }
 
 fn create_bad_row_writer(path: &PathBuf, args: &ParseArgs) -> Result<csv::Writer<File>> {
     let file = File::create(path)?;
-    let writer = WriterBuilder::new()
+    let mut writer_builder = WriterBuilder::new();
+    writer_builder
         .delimiter(args.delimiter as u8)
-        .quote(args.quote.as_byte().unwrap_or(b'"'))
-        .from_writer(file);
+        .flexible(true); // Allow variable field counts for error records
+    
+    if let Some(quote_byte) = args.quote.as_byte() {
+        writer_builder.quote(quote_byte);
+    }
+    
+    let writer = writer_builder.from_writer(file);
     Ok(writer)
 }
 
@@ -175,7 +231,7 @@ mod tests {
             fnull: vec![],
             tnull: String::new(),
             badfile: None,
-            badmax: "100".to_string(),
+            badmax: "0".to_string(),
             noheader: false,
             max_line_length: 1048576,
             encoding: "utf-8".to_string(),
