@@ -6,7 +6,7 @@ use csv::ReaderBuilder;
 use log;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader, Read, Write};
 
 pub struct StreamingInferenceEngine {
     analyzers: HashMap<usize, ColumnAnalyzer>,
@@ -272,7 +272,8 @@ impl StreamingInferenceEngine {
                 expected_fields
             );
             
-            eprintln!("{}", error_msg);
+            eprintln!("Error: {}", error_msg);
+            let _ = std::io::stderr().flush(); // Ensure error message is displayed immediately
             
             if self.verbose {
                 eprintln!("Row content: {:?}", record.iter().collect::<Vec<_>>());

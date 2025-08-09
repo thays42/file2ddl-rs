@@ -16,7 +16,8 @@
       "Bash(.git/hooks/pre-commit)",
       "Bash(RUST_BACKTRACE=1 cargo test parser::streaming::tests::test_intrafield_newlines_default -- --nocapture)",
       "Bash(od:*)",
-      "Bash(echo \"Exit code: $?\")"
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(bash -c:*)"
     ],
     "deny": []
   }
